@@ -597,8 +597,8 @@
         /* ⭐⭐ الإضافة الجديدة: زر التبديل بين المعلم والطالب */
         .role-toggle {
             position: fixed;
-            top: 20px;
-            left: 20px;
+            top: 8px;
+            left: 8px;
             z-index: 1000;
         }
 
@@ -610,7 +610,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            /* background: rgba(0,0,0,0.5); */
             z-index: 2000;
             justify-content: center;
             align-items: center;
@@ -685,7 +685,7 @@
 
 <!-- زر التبديل بين المعلم والطالب -->
 <div class="role-toggle">
-    <button id="toggle-role" class="btn-warning">الانتقال لوحة المعلم</button>
+    <button id="toggle-role" class="btn-warning"> خاص المعلم</button>
 </div>
 
 <!-- ⭐⭐ الإضافة الجديدة: لوحة المعلم -->
@@ -1515,12 +1515,12 @@ function toggleTeacherMode() {
         DOM.studentView.style.display = 'none';
         DOM.resultsView.style.display = 'none';
         DOM.teacherPanel.style.display = 'block';
-        DOM.toggleRole.textContent = 'الانتقال لوحة الطالب';
+        DOM.toggleRole.textContent = ' لوحة الطالب';
         
         // تحميل لوحة المعلم
         loadTeacherPanel();
     } else {
-        // الانتقال إلى لوحة الطالب
+        //   لوحة الطالب
         DOM.teacherPanel.style.display = 'none';
         DOM.loginView.style.display = 'flex';
         DOM.toggleRole.textContent = 'الانتقال لوحة المعلم';
