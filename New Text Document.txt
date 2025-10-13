@@ -1,0 +1,2440 @@
+# نظام الاختبارات التفاعلي - النسخة الكاملة مع رأس السؤال في سطر واحد
+
+```html
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الاختبارات التفاعلي للطلاب</title>
+    <style>
+        :root {
+            --primary-color: #007bff; --success-color: #28a745; --danger-color: #dc3545;
+            --warning-color: #ffc107; --light-bg: #f8f9fa; --dark-text: #343a40;
+            --border-color: #dee2e6; --font-size: 16px;
+        }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark-text); 
+            margin: 0; 
+            padding: 0; 
+            font-size: var(--font-size); 
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: auto; 
+            padding: 20px; 
+        }
+        .card { 
+            background-color: #fff; 
+            padding: 25px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+            margin-bottom: 20px; 
+        }
+        h1, h2, h3 { 
+            color: #0056b3; 
+            border-bottom: 2px solid #e9ecef; 
+            padding-bottom: 10px; 
+        }
+        input, textarea, select, button { 
+            width: calc(100% - 24px); 
+            padding: 12px; 
+            border-radius: 5px; 
+            border: 1px solid var(--border-color); 
+            margin-bottom: 10px; 
+            font-size: 1em; 
+        }
+        button { 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.3s; 
+        }
+        .btn-sm { 
+            padding: 5px 10px; 
+            font-size: 0.8em; 
+            width: auto; 
+            margin-right: 5px; 
+        }
+        .btn-primary { 
+            background-color: var(--primary-color); 
+        } 
+        .btn-primary:hover { 
+            background-color: #0056b3; 
+        }
+        .btn-success { 
+            background-color: var(--success-color); 
+        } 
+        .btn-success:hover { 
+            background-color: #218838; 
+        }
+        .btn-danger { 
+            background-color: var(--danger-color); 
+        } 
+        .btn-danger:hover { 
+            background-color: #c82333; 
+        }
+        .btn-warning { 
+            background-color: var(--warning-color); 
+            color: #212529; 
+        } 
+        .btn-warning:hover { 
+            background-color: #e0a800; 
+        }
+        .highlight-word { 
+            color: #dc3545; 
+            text-decoration: underline; 
+            text-decoration-thickness: 2px; 
+            font-weight: bold; 
+        }
+        
+        #student-view {
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            background-image: url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop');
+            background-size: cover; 
+            background-position: center;
+            display: flex; 
+            padding: 0; 
+            margin: 0; 
+            color: white;
+            direction: ltr;
+        }
+        #scoreboard-area {
+            width: 300px; 
+            background-color: rgba(0, 0, 0, 0.7); 
+            padding: 20px;
+            height: 100vh; 
+            overflow-y: auto; 
+            box-sizing: border-box; 
+            direction: rtl;
+        }
+        #scoreboard-area h2 { 
+            color: var(--warning-color); 
+            border-bottom-color: #555; 
+        }
+        #scoreboard div.scoreboard-item {
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            padding: 8px 0; 
+            border-bottom: 1px solid #444; 
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+        }
+        .scoreboard-item > span:first-child {
+            flex-grow: 1; 
+            min-width: 0; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+        }
+        .scoreboard-item.participated { 
+            opacity: 0.6; 
+            background-color: rgba(0, 255, 132, 0.1); 
+        }
+        .scoreboard-item-name::before { 
+            content: ''; 
+            margin-left: 5px; 
+        }
+        .scoreboard-item.participated .scoreboard-item-name::before { 
+            content: '✅'; 
+        }
+        
+        #quiz-area {
+            flex-grow: 1; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center;
+            align-items: center; 
+            text-align: center; 
+            padding: 20px; 
+            direction: rtl;
+        }
+        #student-name-display { 
+            font-size: 1.5em; 
+            font-weight: bold; 
+            margin-bottom: 20px; 
+            text-shadow: 2px 2px 4px #000; 
+        }
+        #timer-display {
+            font-size: 1.5em !important; 
+            font-weight: bold !important; 
+            background-color: rgba(0, 0, 0, 0.7);
+            color: var(--warning-color); 
+            padding: 10px 25px; 
+            border-radius: 25px; 
+            margin-bottom: 40px;
+            border: 2px solid var(--warning-color); 
+            min-width: 120px; 
+            text-align: center !important;
+        }
+        #question-box {
+            background-color: rgba(255, 255, 255, 0.95); 
+            color: var(--dark-text); 
+            padding: 30px 50px;
+            border-radius: 15px; 
+            min-width: 70%; 
+            max-width: 900px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
+            margin-bottom: 30px;
+            position: relative;
+        }
+        #question-box p { 
+            margin: 0; 
+        }
+        #question-box.font-size-small p { 
+            font-size: 1.0em; 
+        }
+        #question-box.font-size-medium p { 
+            font-size: 2.0em; 
+        }
+        #question-box.font-size-large p { 
+            font-size: 2.0em; 
+        }
+        
+        #options-container { 
+            display: flex; 
+            gap: 8px; 
+            justify-content: center; 
+            width: 100%; 
+        }
+        #options-container.layout-horizontal { 
+            flex-wrap: wrap; 
+            flex-direction: row; 
+        }
+        #options-container.layout-vertical { 
+            flex-direction: column; 
+            align-items: center; 
+        }
+        
+        #options-container button {
+            padding: 15px 35px; 
+            font-size: 1.5em; 
+            background-color: #6c757d; 
+            color: white;
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
+        #options-container.layout-horizontal button { 
+            min-width: 200px; 
+        }
+        #options-container.layout-vertical button { 
+            width: 60%; 
+            min-width: 300px; 
+        }
+
+        #options-container button:hover { 
+            background-color: #5a6268; 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
+        }
+
+        /* تأثيرات الأزرار عند الإجابة */
+        .option-correct {
+            background-color: var(--success-color) !important;
+            animation: pulse-correct 0.5s;
+        }
+        .option-wrong {
+            background-color: var(--danger-color) !important;
+            animation: shake 0.5s;
+        }
+        .option-correct::after {
+            content: " ✅";
+            font-size: 1.2em;
+        }
+        .option-wrong::after {
+            content: " ❌";
+            font-size: 1.2em;
+        }
+
+        @keyframes pulse-correct {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+
+        #session-controls button, #start-quiz-button { 
+            padding: 12px 25px; 
+            font-size: 1.1em; 
+            margin: 0 5px; 
+        }
+        
+        /* تسجيل الدخول */
+        #login-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+            direction: rtl;
+        }
+        #login-card {
+            background-color: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        #login-card h1 {
+            color: #0056b3;
+            margin-bottom: 30px;
+        }
+        #login-card input {
+            margin-bottom: 20px;
+        }
+        
+        /* لوحة النتائج */
+        #results-view {
+            display: none;
+            padding: 20px;
+            direction: rtl;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .results-table th, .results-table td {
+            padding: 12px 15px;
+            text-align: right;
+            border-bottom: 1px solid #ddd;
+        }
+        .results-table th {
+            background-color: #f2f2f2;
+            color: #0056b3;
+        }
+        .results-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        /* الشارات */
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .badge-gold {
+            background-color: #ffd700;
+            color: #000;
+        }
+        .badge-silver {
+            background-color: #c0c0c0;
+            color: #000;
+        }
+        .badge-bronze {
+            background-color: #cd7f32;
+            color: #fff;
+        }
+        
+        /* اختيار الاختبار */
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .quiz-option {
+            padding: 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .quiz-option:hover {
+            border-color: var(--primary-color);
+            background-color: var(--light-bg);
+        }
+        .quiz-option.selected {
+            border-color: var(--primary-color);
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        /* زر الترجمة */
+        #toggle-translation {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            padding: 8px 15px;
+            font-size: 0.9em;
+            background-color: transparent;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* الترجمة */
+        .question-translation {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: transparent;
+            border-radius: 5px;
+            border-right: 3px solid var(--primary-color);
+            font-size: 1.1em;
+            text-align: center;
+        }
+
+        /* نتيجة فورية */
+        .instant-feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: 2em;
+            font-weight: bold;
+            z-index: 1000;
+            animation: fadeInOut 2s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .feedback-correct {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .feedback-wrong {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+
+        /* شريط التقدم */
+        .progress-container {
+            width: 100%;
+            max-width: 900px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background-color: var(--success-color);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        /* لوحة الإدارة */
+        #admin-panel {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            z-index: 1001;
+            max-width: 90%;
+            max-height: 80%;
+            overflow: auto;
+            direction: rtl;
+        }
+        
+        #admin-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        /* إشعارات Google Sheets */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success {
+            background-color: var(--success-color);
+        }
+
+        .notification.error {
+            background-color: var(--danger-color);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* قسم Google Sheets في لوحة الإدارة */
+        .google-sheets-section {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            background-color: #f8f9fa;
+        }
+
+        /* ⭐⭐ الإضافة الجديدة: لوحة المعلم */
+        #teacher-panel {
+            display: none;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .teacher-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .teacher-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+
+        .teacher-tab.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ⭐⭐ الإضافة الجديدة: استيراد الاختبارات */
+        .import-section {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            background-color: #f9f9f9;
+        }
+
+        .import-section.drag-over {
+            border-color: var(--primary-color);
+            background-color: #e3f2fd;
+        }
+
+        .quiz-management {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .quiz-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .quiz-card h4 {
+            margin-top: 0;
+            color: #0056b3;
+        }
+
+        .quiz-card .quiz-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        /* ⭐⭐ الإضافة الجديدة: رأس السؤال في سطر واحد */
+        .question-text-single-line {
+            text-align: center;
+            margin: 20px 0;
+            line-height: 1.6;
+            font-size: 2.0em;
+        }
+
+        /* ⭐⭐ الإضافة الجديدة: زر التبديل بين المعلم والطالب */
+        .role-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        /* ⭐⭐ الإضافة الجديدة: نافذة تسجيل الدخول للمعلم */
+        #teacher-login-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #teacher-login-form {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        #admin-login-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #admin-login-form {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .login-error {
+            color: var(--danger-color);
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ⭐⭐ الإضافة الجديدة: نافذة تسجيل الدخول للمعلم -->
+<div id="teacher-login-modal">
+    <div id="teacher-login-form">
+        <h2>تسجيل الدخول - لوحة المعلم</h2>
+        <input type="text" id="teacher-username" placeholder="اسم المستخدم">
+        <input type="password" id="teacher-password" placeholder="كلمة المرور">
+        <button class="btn-primary" onclick="loginAsTeacher()">تسجيل الدخول</button>
+        <div id="teacher-login-error" class="login-error"></div>
+        <p style="text-align: center; margin-top: 15px; font-size: 0.9em;">
+            البيانات الافتراضية: admin / 1234
+        </p>
+    </div>
+</div>
+
+<!-- ⭐⭐ الإضافة الجديدة: نافذة تسجيل الدخول للإدارة -->
+<div id="admin-login-modal">
+    <div id="admin-login-form">
+        <h2>تسجيل الدخول - لوحة الإدارة</h2>
+        <input type="text" id="admin-username" placeholder="اسم المستخدم">
+        <input type="password" id="admin-password" placeholder="كلمة المرور">
+        <button class="btn-primary" onclick="loginAsAdmin()">تسجيل الدخول</button>
+        <div id="admin-login-error" class="login-error"></div>
+        <p style="text-align: center; margin-top: 15px; font-size: 0.9em;">
+            البيانات الافتراضية: admin / 1234
+        </p>
+    </div>
+</div>
+
+<!-- زر التبديل بين المعلم والطالب -->
+<div class="role-toggle">
+    <button id="toggle-role" class="btn-warning">الانتقال لوحة المعلم</button>
+</div>
+
+<!-- ⭐⭐ الإضافة الجديدة: لوحة المعلم -->
+<div id="teacher-panel">
+    <div class="container">
+        <div class="card">
+            <h1>لوحة إدارة المعلم</h1>
+            <p>من هنا يمكنك إدارة الاختبارات والطلاب والنتائج</p>
+            <button class="btn-danger" onclick="logoutTeacher()">تسجيل الخروج</button>
+        </div>
+
+        <div class="card">
+            <div class="teacher-tabs">
+                <div class="teacher-tab active" data-tab="quizzes">إدارة الاختبارات</div>
+                <div class="teacher-tab" data-tab="students">إدارة الطلاب</div>
+                <div class="teacher-tab" data-tab="results">النتائج والإحصائيات</div>
+                <div class="teacher-tab" data-tab="import">استيراد الاختبارات</div>
+                <div class="teacher-tab" data-tab="settings">إعدادات الحساب</div>
+            </div>
+
+            <!-- تبويب إدارة الاختبارات -->
+            <div class="tab-content active" id="quizzes-tab">
+                <h2>الاختبارات المتاحة</h2>
+                <button class="btn-success" onclick="createNewQuiz()">إنشاء اختبار جديد</button>
+                
+                <div class="quiz-management" id="quiz-management">
+                    <!-- سيتم تعبئتها بالاختبارات المتاحة -->
+                </div>
+            </div>
+
+            <!-- تبويب إدارة الطلاب -->
+            <div class="tab-content" id="students-tab">
+                <h2>إدارة الطلاب</h2>
+                <div id="students-management">
+                    <!-- سيتم تعبئتها بالطلاب -->
+                </div>
+            </div>
+
+            <!-- تبويب النتائج والإحصائيات -->
+            <div class="tab-content" id="results-tab">
+                <h2>النتائج والإحصائيات</h2>
+                <div id="teacher-results">
+                    <!-- سيتم تعبئتها بالنتائج -->
+                </div>
+            </div>
+
+            <!-- تبويب استيراد الاختبارات -->
+            <div class="tab-content" id="import-tab">
+                <h2>استيراد الاختبارات</h2>
+                <p>يمكنك استيراد الاختبارات من ملف JSON أو CSV</p>
+                
+                <div class="import-section" id="import-dropzone">
+                    <h3>اسحب وأفلت ملف الاختبار هنا</h3>
+                    <p>أو</p>
+                    <input type="file" id="quiz-file-input" accept=".json,.csv" style="display: none;">
+                    <button class="btn-primary" onclick="document.getElementById('quiz-file-input').click()">اختر ملف</button>
+                    <p>صيغ الملفات المدعومة: JSON, CSV</p>
+                </div>
+
+                <div id="import-preview" style="display: none; margin-top: 20px;">
+                    <h3>معاينة الاختبار المستورد</h3>
+                    <div id="preview-content"></div>
+                    <button class="btn-success" onclick="confirmImport()">تأكيد الاستيراد</button>
+                    <button class="btn-danger" onclick="cancelImport()">إلغاء</button>
+                </div>
+            </div>
+
+            <!-- ⭐⭐ الإضافة الجديدة: تبويب إعدادات الحساب -->
+            <div class="tab-content" id="settings-tab">
+                <h2>إعدادات الحساب</h2>
+                <div class="card">
+                    <h3>تغيير كلمة المرور</h3>
+                    <input type="password" id="current-password" placeholder="كلمة المرور الحالية">
+                    <input type="password" id="new-password" placeholder="كلمة المرور الجديدة">
+                    <input type="password" id="confirm-password" placeholder="تأكيد كلمة المرور الجديدة">
+                    <button class="btn-primary" onclick="changeTeacherPassword()">تغيير كلمة المرور</button>
+                    <div id="password-change-message"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="login-view">
+    <div id="login-card">
+        <h1>نظام الاختبارات التفاعلي</h1>
+        <p>أدخل اسمك واختر الاختبار للبدء</p>
+        <input type="text" id="student-name" placeholder="أدخل اسمك هنا">
+        
+        <div id="quiz-selection" class="quiz-options">
+            <!-- سيتم تعبئتها بالاختبارات المتاحة -->
+        </div>
+        
+        <button class="btn-primary" id="login-btn" style="width: 100%; margin-top: 20px;">بدء الاختبار</button>
+        
+        <div style="margin-top: 30px;">
+            <h3>أفضل 5 طلاب</h3>
+            <div id="top-students"></div>
+        </div>
+    </div>
+</div>
+
+<div id="student-view" style="display: none;">
+    <div id="scoreboard-area">
+        <h2>نتائج الجلسة</h2>
+        <div id="scoreboard"></div>
+    </div>
+    <div id="quiz-area">
+        <div id="student-name-display"></div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div id="timer-display">00:00</div>
+        <div id="question-box"></div>
+        <div id="options-container"></div>
+        <div id="session-controls" style="margin-top: 20px;"></div>
+    </div>
+</div>
+
+<div id="results-view">
+    <div class="container">
+        <div class="card">
+            <h1>نتيجة الاختبار</h1>
+            <div id="student-result"></div>
+            <button class="btn-primary" id="back-to-login">العودة إلى الصفحة الرئيسية</button>
+            <button class="btn-success" id="try-again">محاولة أخرى</button>
+        </div>
+        
+        <div class="card">
+            <h2>تصنيف الطلاب</h2>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>الترتيب</th>
+                        <th>اسم الطالب</th>
+                        <th>النتيجة</th>
+                        <th>الاختبار</th>
+                        <th>التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- زر الإدارة - يمكن وضعه في الزاوية -->
+<button id="admin-btn" style="position: fixed; bottom: 20px; left: 20px; z-index: 1000;" 
+        class="btn-warning btn-sm" onclick="showAdminLogin()">إدارة النتائج</button>
+
+<!-- لوحة الإدارة -->
+<div id="admin-panel">
+    <h2>لوحة إدارة النتائج</h2>
+    <div style="margin: 15px 0;">
+        <button class="btn-primary" onclick="exportToCSV()">تصدير لـ Excel</button>
+        <button class="btn-danger" onclick="clearAllResults()">حذف جميع النتائج</button>
+        <button class="btn-warning" onclick="logoutAdmin()">تسجيل الخروج</button>
+        <button class="btn-warning" onclick="toggleAdminPanel()">إغلاق</button>
+    </div>
+
+    <!-- قسم Google Sheets الجديد -->
+    <div class="google-sheets-section">
+        <h3>🔗 إعدادات Google Sheets</h3>
+        <p>ربط النتائج مع Google Sheets للتخزين الآمن</p>
+        
+        <input type="text" id="google-script-url" placeholder="أدخل رابط Google Script هنا" 
+               style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px;">
+        
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-success" onclick="saveGoogleScriptUrl()">💾 حفظ الرابط</button>
+            <button class="btn-warning" onclick="testGoogleSheetsConnection()">🔍 اختبار الاتصال</button>
+            <button class="btn-primary" onclick="showGoogleSetupGuide()">📖 دليل التفعيل</button>
+        </div>
+        
+        <div id="google-sheets-status" style="margin-top: 10px; padding: 10px; border-radius: 5px;"></div>
+        
+        <div style="margin-top: 15px; font-size: 0.9em; color: #666;">
+            <strong>💡 مزايا Google Sheets:</strong>
+            <ul>
+                <li>حفظ آمن للنتائج في حسابك الشخصي</li>
+                <li>إمكانية التصدير والتحليل بسهولة</li>
+                <li>مزامنة فورية مع نظام الاختبارات</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="admin-results"></div>
+</div>
+
+<div id="admin-overlay"></div>
+
+<audio id="correctSound" src="https://www.soundjay.com/buttons/sounds/button-1.mp3" preload="auto"></audio>
+<audio id="wrongSound" src="https://www.soundjay.com/buttons/sounds/button-2.mp3" preload="auto"></audio>
+
+<script>
+// بيانات الاختبارات الجاهزة مع الترجمات
+let availableQuizzes = [
+    {
+        title: "اختبار اللغة الفرنسية - الأضداد",
+        questions: [
+            {
+                "text": "*L'opposé*  de  >>>* aller-retour *",
+                "translation": "عكس (ذهاب وعودة) هو",
+                "options": [
+                    "aller simple",
+                    "aller matin",
+                    "arrivée"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "*L'opposé*  de  >>>* célèbre *",
+                "translation": "عكس (مشهور) هو",
+                "options": [
+                    "inconnu",
+                    "connu",
+                    "fameux"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "*L'opposé*  de  >>>* content *",
+                "translation": "عكس (راضٍ) هو",
+                "options": [
+                    "mécontent",
+                    "heureux",
+                    "grand"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "*L'opposé*  de  >>>* chaud *",
+                "translation": "عكس (حار) هو",
+                "options": [
+                    "froid",
+                    "beau",
+                    "mauvais"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "*L'opposé*  de  >>>* départ *",
+                "translation": "عكس (مغادرة) هو",
+                "options": [
+                    "arrivée",
+                    "retour",
+                    "parler"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "*L'opposé*  de  >>>* grand *",
+                "translation": "عكس (كبير) هو",
+                "options": [
+                    "petit",
+                    "gros",
+                    "vieux"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "*L'opposé*  de  >>>* gauche *",
+                "translation": "عكس (يسار) هو",
+                "options": [
+                    "droite",
+                    "haut",
+                    "loin"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "*L'opposé*  de  >>>* libre *",
+                "translation": "عكس (حر) هو",
+                "options": [
+                    "occupée",
+                    "heureux",
+                    "super"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "*L'opposé*  de  >>>* matin *",
+                "translation": "عكس (صباح) هو",
+                "options": [
+                    "soir",
+                    "midi",
+                    "Bonjour"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "*L'opposé*  de  >>>* midi *",
+                "translation": "عكس (ظهر) هو",
+                "options": [
+                    "minuit",
+                    "soir",
+                    "matin"
+                ],
+                "correctAnswerIndex": 0
+            }
+        ],
+        "timer": 30
+    },
+    {
+        "title": "تجربة",
+        "questions": [
+            {
+                "text": "quelle est ta *profession*",
+                "translation": "وظيفة",
+                "options": [
+                    "1",
+                    "1111",
+                    "111111"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "quel *jour*",
+                "translation": "يوم",
+                "options": [
+                    "2",
+                    "222222",
+                    "2222"
+                ],
+                "correctAnswerIndex": 0
+            }
+        ],
+        "timer": 30
+    },
+    {
+        title: "اختبار اللغة الفرنسية - المرادفات",
+        questions: [
+            {
+                "text": "Le même *sens* de >>>* achats*",
+                "translation": "مرادف (مشتريات) هو",
+                "options": [
+                    "shopping",
+                    "soldes",
+                    "vendeur"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "Le même *sens* de >>>* bagage *",
+                "translation": "مرادف (أمتعة) هو",
+                "options": [
+                    "valise",
+                    "visa",
+                    "ticket"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "Le même *sens* de >>>* billet *",
+                "translation": "مرادف (تذكرة) هو",
+                "options": [
+                    "ticket",
+                    "valise",
+                    "poids"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "Le même *sens* de >>>* célèbre *",
+                "translation": "مرادف (مشهور) هو",
+                "options": [
+                    "connu",
+                    "soldes",
+                    "inconnu"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "Le même *sens* de >>>* midi *",
+                "translation": "مرادف (ظهر) هو",
+                "options": [
+                    "12 heures",
+                    "matin",
+                    "23 heures"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "Le même *sens* de >>>* minuit *",
+                "translation": "مرادف (منتصف الليل) هو",
+                "options": [
+                    "12 h soir",
+                    "12 h matin",
+                    "23 h"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "Le même *sens* de >>>* réductions *",
+                "translation": "مرادف (تخفيضات) هو",
+                "options": [
+                    "soldes",
+                    "achats",
+                    "courses"
+                ],
+                "correctAnswerIndex": 0
+            }
+        ],
+        "timer": 30
+    },
+    {
+        title: "اختبار اللغة الفرنسية - المحادثة",
+        questions: [
+            {
+                "text": "Vous dites la *nationalité*",
+                "translation": "تقول الجنسية",
+                "options": [
+                    "Je suis Koweitien",
+                    "Je suis lycéen",
+                    "J'aime la musique"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "Vous dites *l'âge*",
+                "translation": "تقول العمر",
+                "options": [
+                    "J'ai dix-sept ans",
+                    "J'aime le tennis",
+                    "J'habite à Koweit."
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "Dire la *profession*",
+                "translation": "تقول المهنة",
+                "options": [
+                    "Je suis français",
+                    "Je suis lycéen",
+                    "J'aime le tennis"
+                ],
+                "correctAnswerIndex": 1
+            },
+            {
+                "text": "parler de son *goût / loisir*",
+                "translation": "تتحدث عن هوايتك",
+                "options": [
+                    "J'aime la musique.",
+                    "Je parle français",
+                    "J'habite en france"
+                ],
+                "correctAnswerIndex": 0
+            },
+            {
+                "text": "parler de *langues parlées*",
+                "translation": "تتحدث عن اللغات التي تتكلمها",
+                "options": [
+                    "Je parle français",
+                    "J'habite en france",
+                    "J'aime la musique."
+                ],
+                "correctAnswerIndex": 0
+            }
+        ],
+        "timer": 30
+    }
+];
+
+// ⭐⭐ الإضافة الجديدة: تكوين Google Sheets
+let GOOGLE_SCRIPT_URL = localStorage.getItem('googleScriptUrl') || '';
+
+// ⭐⭐ الإضافة الجديدة: بيانات اعتماد المعلم والإدارة
+let TEACHER_CREDENTIALS = JSON.parse(localStorage.getItem('teacherCredentials')) || {
+    username: 'admin',
+    password: '1234'
+};
+
+let ADMIN_CREDENTIALS = JSON.parse(localStorage.getItem('adminCredentials')) || {
+    username: 'admin',
+    password: '1234'
+};
+
+// إعدادات JSONBin.io - استبدل هذه بالقيم الحقيقية من موقعك
+const JSONBIN_CONFIG = {
+    BIN_ID: '68e6d20f43b1c97be95f54d3',
+    SECRET_KEY: '$2a$10$femNwI04D2e3dipmowEljevvrHv718qQDxn1ocnlREhUXgviCLLtG',
+    API_URL: 'https://api.jsonbin.io/v3/b/'
+};
+
+let state = {
+    currentStudent: "",
+    currentQuiz: null,
+    currentQuestionIndex: 0,
+    score: 0,
+    timer: 0,
+    questionTimer: null,
+    showTranslation: true,
+    shuffledQuestions: [],
+    currentQuestion: null,
+    isTeacherMode: false,
+    isTeacherLoggedIn: false,
+    isAdminLoggedIn: false
+};
+
+const DOM = {
+    loginView: document.getElementById('login-view'),
+    studentView: document.getElementById('student-view'),
+    resultsView: document.getElementById('results-view'),
+    teacherPanel: document.getElementById('teacher-panel'),
+    studentNameInput: document.getElementById('student-name'),
+    loginBtn: document.getElementById('login-btn'),
+    studentNameDisplay: document.getElementById('student-name-display'),
+    timerDisplay: document.getElementById('timer-display'),
+    questionBox: document.getElementById('question-box'),
+    optionsContainer: document.getElementById('options-container'),
+    sessionControls: document.getElementById('session-controls'),
+    scoreboard: document.getElementById('scoreboard'),
+    correctSound: document.getElementById('correctSound'),
+    wrongSound: document.getElementById('wrongSound'),
+    studentResult: document.getElementById('student-result'),
+    leaderboard: document.getElementById('leaderboard'),
+    backToLogin: document.getElementById('back-to-login'),
+    tryAgain: document.getElementById('try-again'),
+    topStudents: document.getElementById('top-students'),
+    quizSelection: document.getElementById('quiz-selection'),
+    progressBar: document.getElementById('progress-bar'),
+    toggleRole: document.getElementById('toggle-role'),
+    teacherLoginModal: document.getElementById('teacher-login-modal'),
+    adminLoginModal: document.getElementById('admin-login-modal')
+};
+
+// ⭐⭐ الإضافة الجديدة: دوال المصادقة
+function showTeacherLogin() {
+    DOM.teacherLoginModal.style.display = 'flex';
+    document.getElementById('teacher-login-error').textContent = '';
+}
+
+function loginAsTeacher() {
+    const username = document.getElementById('teacher-username').value;
+    const password = document.getElementById('teacher-password').value;
+    
+    if (username === TEACHER_CREDENTIALS.username && password === TEACHER_CREDENTIALS.password) {
+        state.isTeacherLoggedIn = true;
+        DOM.teacherLoginModal.style.display = 'none';
+        toggleTeacherMode();
+        showNotification('✅ تم تسجيل الدخول بنجاح إلى لوحة المعلم', 'success');
+    } else {
+        document.getElementById('teacher-login-error').textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة';
+    }
+}
+
+function logoutTeacher() {
+    state.isTeacherLoggedIn = false;
+    state.isTeacherMode = false;
+    DOM.teacherPanel.style.display = 'none';
+    DOM.loginView.style.display = 'flex';
+    DOM.toggleRole.textContent = 'الانتقال لوحة المعلم';
+    showNotification('✅ تم تسجيل الخروج من لوحة المعلم', 'success');
+}
+
+function showAdminLogin() {
+    DOM.adminLoginModal.style.display = 'flex';
+    document.getElementById('admin-login-error').textContent = '';
+}
+
+function loginAsAdmin() {
+    const username = document.getElementById('admin-username').value;
+    const password = document.getElementById('admin-password').value;
+    
+    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+        state.isAdminLoggedIn = true;
+        DOM.adminLoginModal.style.display = 'none';
+        toggleAdminPanel();
+        showNotification('✅ تم تسجيل الدخول بنجاح إلى لوحة الإدارة', 'success');
+    } else {
+        document.getElementById('admin-login-error').textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة';
+    }
+}
+
+function logoutAdmin() {
+    state.isAdminLoggedIn = false;
+    toggleAdminPanel();
+    showNotification('✅ تم تسجيل الخروج من لوحة الإدارة', 'success');
+}
+
+function changeTeacherPassword() {
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+    
+    const messageElement = document.getElementById('password-change-message');
+    
+    if (currentPassword !== TEACHER_CREDENTIALS.password) {
+        messageElement.textContent = 'كلمة المرور الحالية غير صحيحة';
+        messageElement.style.color = 'var(--danger-color)';
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        messageElement.textContent = 'كلمة المرور الجديدة غير متطابقة';
+        messageElement.style.color = 'var(--danger-color)';
+        return;
+    }
+    
+    if (newPassword.length < 4) {
+        messageElement.textContent = 'كلمة المرور يجب أن تكون 4 أحرف على الأقل';
+        messageElement.style.color = 'var(--danger-color)';
+        return;
+    }
+    
+    TEACHER_CREDENTIALS.password = newPassword;
+    localStorage.setItem('teacherCredentials', JSON.stringify(TEACHER_CREDENTIALS));
+    
+    messageElement.textContent = '✅ تم تغيير كلمة المرور بنجاح';
+    messageElement.style.color = 'var(--success-color)';
+    
+    // مسح الحقول
+    document.getElementById('current-password').value = '';
+    document.getElementById('new-password').value = '';
+    document.getElementById('confirm-password').value = '';
+}
+
+// ⭐⭐ الإضافة الجديدة: دوال Google Sheets
+async function sendToGoogleSheets(studentData) {
+    if (!GOOGLE_SCRIPT_URL) {
+        console.log('رابط Google Sheets غير مضبوط - سيتم الحفظ في JSONBin.io فقط');
+        return false;
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('name', studentData.studentName);
+        formData.append('score', studentData.score);
+        formData.append('total', studentData.total);
+        formData.append('percentage', studentData.percentage);
+        formData.append('quiz', studentData.quizTitle);
+        formData.append('date', studentData.date);
+        formData.append('timestamp', studentData.timestamp);
+        
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            console.log('✅ تم إرسال النتائج إلى Google Sheets بنجاح');
+            showNotification('✅ تم حفظ نتيجتك في Google Sheets', 'success');
+            return true;
+        } else {
+            console.error('❌ فشل في إرسال النتائج إلى Google Sheets');
+            showNotification('⚠️ تم الحفظ محلياً فقط', 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ خطأ في إرسال النتائج إلى Google Sheets:', error);
+        showNotification('⚠️ تم الحفظ محلياً فقط', 'error');
+        return false;
+    }
+}
+
+// ⭐⭐ الإضافة الجديدة: دوال إدارة Google Sheets
+function saveGoogleScriptUrl() {
+    const url = document.getElementById('google-script-url').value.trim();
+    if (url) {
+        GOOGLE_SCRIPT_URL = url;
+        localStorage.setItem('googleScriptUrl', url);
+        showNotification('✅ تم حفظ رابط Google Sheets بنجاح', 'success');
+        updateGoogleSheetsStatus('تم حفظ الرابط بنجاح ✅', 'success');
+    } else {
+        showNotification('❌ يرجى إدخال رابط صحيح', 'error');
+    }
+}
+
+function testGoogleSheetsConnection() {
+    if (!GOOGLE_SCRIPT_URL) {
+        showNotification('❌ يرجى إدخال الرابط أولاً', 'error');
+        return;
+    }
+    
+    updateGoogleSheetsStatus('جاري اختبار الاتصال...', 'warning');
+    
+    // اختبار الاتصال بإرسال بيانات تجريبية
+    const testData = {
+        studentName: 'اختبار اتصال',
+        score: 1,
+        total: 1,
+        percentage: 100,
+        quizTitle: 'اختبار اتصال',
+        date: new Date().toLocaleDateString('ar-EG'),
+        timestamp: new Date().getTime()
+    };
+    
+    sendToGoogleSheets(testData)
+        .then(success => {
+            if (success) {
+                updateGoogleSheetsStatus('✅ الاتصال يعمل بشكل صحيح', 'success');
+            } else {
+                updateGoogleSheetsStatus('❌ فشل في الاتصال - تحقق من الرابط', 'error');
+            }
+        });
+}
+
+function showGoogleSetupGuide() {
+    const guide = `
+🔧 دليل إعداد Google Sheets الكامل:
+
+1. اذهب إلى: script.google.com
+2. أنشئ مشروع جديد
+3. الصق كود Google Apps Script التالي:
+
+\`\`\`javascript
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.openById('YOUR_SHEET_ID').getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    
+    sheet.appendRow([
+      new Date(),
+      data.name,
+      data.score,
+      data.total,
+      data.percentage + '%',
+      data.quiz,
+      data.date
+    ]);
+    
+    return ContentService.createTextOutput(JSON.stringify({success: true}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+\`\`\`
+
+4. استبدل YOUR_SHEET_ID بمعرف جدولك
+5. انشر المشروع كـ Web App
+6. انسخ الرابط والصقه في الحقل أعلاه
+
+هل تريد أن أرسل لك كود Google Script كامل مع الشرح المفصل؟
+    `;
+    
+    alert(guide);
+}
+
+function updateGoogleSheetsStatus(message, type) {
+    const statusElement = document.getElementById('google-sheets-status');
+    statusElement.textContent = message;
+    statusElement.style.backgroundColor = type === 'success' ? '#d4edda' : 
+                                        type === 'error' ? '#f8d7da' : '#fff3cd';
+    statusElement.style.color = type === 'success' ? '#155724' : 
+                               type === 'error' ? '#721c24' : '#856404';
+    statusElement.style.border = `1px solid ${type === 'success' ? '#c3e6cb' : 
+                                 type === 'error' ? '#f5c6cb' : '#ffeaa7'}`;
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        document.body.removeChild(notification);
+    }, 3000);
+}
+
+// دوال للتعامل مع JSONBin.io
+async function saveToJSONBin(data) {
+    try {
+        const response = await fetch(`${JSONBIN_CONFIG.API_URL}${JSONBIN_CONFIG.BIN_ID}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': JSONBIN_CONFIG.SECRET_KEY,
+                'X-Bin-Versioning': 'false'
+            },
+            body: JSON.stringify({
+                students: data,
+                lastUpdate: new Date().toISOString()
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('فشل في حفظ البيانات');
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('خطأ في الحفظ:', error);
+        // استخدم localStorage كنسخة احتياطية
+        localStorage.setItem('studentsBackup', JSON.stringify(data));
+        return null;
+    }
+}
+
+async function loadFromJSONBin() {
+    try {
+        const response = await fetch(`${JSONBIN_CONFIG.API_URL}${JSONBIN_CONFIG.BIN_ID}/latest`, {
+            headers: {
+                'X-Master-Key': JSONBIN_CONFIG.SECRET_KEY
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('فشل في تحميل البيانات');
+        }
+        
+        const data = await response.json();
+        return data.record.students || [];
+    } catch (error) {
+        console.error('خطأ في التحميل:', error);
+        // استخدم localStorage كنسخة احتياطية
+        const backup = localStorage.getItem('studentsBackup');
+        return backup ? JSON.parse(backup) : [];
+    }
+}
+
+// ⭐⭐ الإضافة الجديدة: دوال لوحة المعلم
+function toggleTeacherMode() {
+    if (!state.isTeacherLoggedIn) {
+        showTeacherLogin();
+        return;
+    }
+    
+    state.isTeacherMode = !state.isTeacherMode;
+    
+    if (state.isTeacherMode) {
+        // الانتقال إلى لوحة المعلم
+        DOM.loginView.style.display = 'none';
+        DOM.studentView.style.display = 'none';
+        DOM.resultsView.style.display = 'none';
+        DOM.teacherPanel.style.display = 'block';
+        DOM.toggleRole.textContent = 'الانتقال لوحة الطالب';
+        
+        // تحميل لوحة المعلم
+        loadTeacherPanel();
+    } else {
+        // الانتقال إلى لوحة الطالب
+        DOM.teacherPanel.style.display = 'none';
+        DOM.loginView.style.display = 'flex';
+        DOM.toggleRole.textContent = 'الانتقال لوحة المعلم';
+    }
+}
+
+function loadTeacherPanel() {
+    // تحميل إدارة الاختبارات
+    renderQuizManagement();
+    
+    // تحميل إدارة الطلاب
+    renderStudentsManagement();
+    
+    // تحميل النتائج والإحصائيات
+    renderTeacherResults();
+    
+    // إعداد استيراد الاختبارات
+    setupImportSection();
+}
+
+function renderQuizManagement() {
+    const quizManagement = document.getElementById('quiz-management');
+    quizManagement.innerHTML = '';
+    
+    availableQuizzes.forEach((quiz, index) => {
+        const quizCard = document.createElement('div');
+        quizCard.className = 'quiz-card';
+        quizCard.innerHTML = `
+            <h4>${quiz.title}</h4>
+            <p>عدد الأسئلة: ${quiz.questions.length}</p>
+            <p>الوقت: ${quiz.timer} ثانية</p>
+            <div class="quiz-actions">
+                <button class="btn-primary btn-sm" onclick="editQuiz(${index})">تعديل</button>
+                <button class="btn-danger btn-sm" onclick="deleteQuiz(${index})">حذف</button>
+                <button class="btn-warning btn-sm" onclick="exportQuiz(${index})">تصدير</button>
+            </div>
+        `;
+        quizManagement.appendChild(quizCard);
+    });
+}
+
+function renderStudentsManagement() {
+    const studentsManagement = document.getElementById('students-management');
+    studentsManagement.innerHTML = '<p>جاري تحميل بيانات الطلاب...</p>';
+    
+    loadFromJSONBin().then(results => {
+        if (results.length === 0) {
+            studentsManagement.innerHTML = '<p>لا توجد بيانات طلاب</p>';
+            return;
+        }
+        
+        const students = groupResultsByStudent(results);
+        studentsManagement.innerHTML = `
+            <h3>إجمالي الطلاب: ${Object.keys(students).length}</h3>
+            ${Object.entries(students).map(([student, tests]) => `
+                <div class="card">
+                    <h4>${student}</h4>
+                    <p>عدد الاختبارات: ${tests.length}</p>
+                    <p>أفضل نتيجة: ${Math.max(...tests.map(t => t.percentage))}%</p>
+                    <p>متوسط النتائج: ${Math.round(tests.reduce((sum, t) => sum + t.percentage, 0) / tests.length)}%</p>
+                </div>
+            `).join('')}
+        `;
+    });
+}
+
+function renderTeacherResults() {
+    const teacherResults = document.getElementById('teacher-results');
+    teacherResults.innerHTML = '<p>جاري تحميل النتائج...</p>';
+    
+    loadFromJSONBin().then(results => {
+        if (results.length === 0) {
+            teacherResults.innerHTML = '<p>لا توجد نتائج</p>';
+            return;
+        }
+        
+        const stats = calculateStatistics(results);
+        teacherResults.innerHTML = `
+            <div class="card">
+                <h3>إحصائيات عامة</h3>
+                <p>إجمالي الاختبارات: ${stats.totalTests}</p>
+                <p>متوسط النتائج: ${stats.averageScore}%</p>
+                <p>أفضل نتيجة: ${stats.bestScore}%</p>
+                <p>أسوأ نتيجة: ${stats.worstScore}%</p>
+            </div>
+            <div class="card">
+                <h3>أفضل 10 طلاب</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>الترتيب</th>
+                            <th>اسم الطالب</th>
+                            <th>أفضل نتيجة</th>
+                            <th>عدد الاختبارات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${stats.topStudents.map((student, index) => `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${student.name}</td>
+                                <td>${student.bestScore}%</td>
+                                <td>${student.testCount}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    });
+}
+
+function calculateStatistics(results) {
+    const students = groupResultsByStudent(results);
+    const studentStats = Object.entries(students).map(([name, tests]) => ({
+        name,
+        bestScore: Math.max(...tests.map(t => t.percentage)),
+        testCount: tests.length
+    }));
+    
+    return {
+        totalTests: results.length,
+        averageScore: Math.round(results.reduce((sum, r) => sum + r.percentage, 0) / results.length),
+        bestScore: Math.max(...results.map(r => r.percentage)),
+        worstScore: Math.min(...results.map(r => r.percentage)),
+        topStudents: studentStats.sort((a, b) => b.bestScore - a.bestScore).slice(0, 10)
+    };
+}
+
+function setupImportSection() {
+    const dropzone = document.getElementById('import-dropzone');
+    const fileInput = document.getElementById('quiz-file-input');
+    
+    // إعداد سحب وإفلات الملفات
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('drag-over');
+    });
+    
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('drag-over');
+    });
+    
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('drag-over');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileImport(files[0]);
+        }
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileImport(e.target.files[0]);
+        }
+    });
+}
+
+function handleFileImport(file) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            let quizData;
+            
+            if (file.name.endsWith('.json')) {
+                quizData = JSON.parse(e.target.result);
+            } else if (file.name.endsWith('.csv')) {
+                quizData = parseCSV(e.target.result);
+            } else {
+                throw new Error('صيغة الملف غير مدعومة');
+            }
+            
+            // التحقق من صحة البيانات
+            if (!validateQuizData(quizData)) {
+                throw new Error('بيانات الاختبار غير صالحة');
+            }
+            
+            // عرض معاينة البيانات
+            showImportPreview(quizData);
+        } catch (error) {
+            showNotification('❌ فشل في استيراد الملف: ' + error.message, 'error');
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+function parseCSV(csvText) {
+    const lines = csvText.split('\n');
+    const quiz = {
+        title: 'اختبار مستورد',
+        questions: [],
+        timer: 30
+    };
+    
+    for (let i = 1; i < lines.length; i++) { // تخطي العنوان
+        const cells = lines[i].split(',').map(cell => cell.trim());
+        if (cells.length >= 5) {
+            quiz.questions.push({
+                text: cells[0],
+                translation: cells[1],
+                options: [cells[2], cells[3], cells[4]],
+                correctAnswerIndex: parseInt(cells[5]) || 0
+            });
+        }
+    }
+    
+    return quiz;
+}
+
+function validateQuizData(quizData) {
+    return quizData && 
+           quizData.title && 
+           Array.isArray(quizData.questions) && 
+           quizData.questions.length > 0 &&
+           quizData.questions.every(q => 
+               q.text && 
+               Array.isArray(q.options) && 
+               q.options.length >= 2 && 
+               typeof q.correctAnswerIndex === 'number'
+           );
+}
+
+function showImportPreview(quizData) {
+    const previewContent = document.getElementById('preview-content');
+    const importPreview = document.getElementById('import-preview');
+    
+    previewContent.innerHTML = `
+        <div class="card">
+            <h4>${quizData.title}</h4>
+            <p>عدد الأسئلة: ${quizData.questions.length}</p>
+            <p>الوقت: ${quizData.timer || 30} ثانية</p>
+            <h5>عينة من الأسئلة:</h5>
+            ${quizData.questions.slice(0, 3).map((q, i) => `
+                <div style="border: 1px solid #ddd; padding: 10px; margin: 10px 0;">
+                    <p><strong>السؤال ${i+1}:</strong> ${q.text}</p>
+                    <p><strong>الترجمة:</strong> ${q.translation}</p>
+                    <p><strong>الخيارات:</strong> ${q.options.join('، ')}</p>
+                    <p><strong>الإجابة الصحيحة:</strong> ${q.options[q.correctAnswerIndex]}</p>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    importPreview.style.display = 'block';
+    window.importQuizData = quizData;
+}
+
+function confirmImport() {
+    if (window.importQuizData) {
+        availableQuizzes.push(window.importQuizData);
+        saveQuizzesToStorage();
+        renderQuizManagement();
+        renderQuizSelection();
+        
+        showNotification('✅ تم استيراد الاختبار بنجاح', 'success');
+        cancelImport();
+    }
+}
+
+function cancelImport() {
+    document.getElementById('import-preview').style.display = 'none';
+    document.getElementById('quiz-file-input').value = '';
+    delete window.importQuizData;
+}
+
+function createNewQuiz() {
+    const newQuiz = {
+        title: 'اختبار جديد',
+        questions: [],
+        timer: 30
+    };
+    
+    availableQuizzes.push(newQuiz);
+    saveQuizzesToStorage();
+    renderQuizManagement();
+    showNotification('✅ تم إنشاء اختبار جديد', 'success');
+}
+
+function editQuiz(index) {
+    // في تطبيق حقيقي، يمكن فتح نافذة تعديل مفصلة
+    const newTitle = prompt('أدخل العنوان الجديد للاختبار:', availableQuizzes[index].title);
+    if (newTitle) {
+        availableQuizzes[index].title = newTitle;
+        saveQuizzesToStorage();
+        renderQuizManagement();
+        renderQuizSelection();
+        showNotification('✅ تم تعديل الاختبار', 'success');
+    }
+}
+
+function deleteQuiz(index) {
+    if (confirm('هل أنت متأكد من حذف هذا الاختبار؟')) {
+        availableQuizzes.splice(index, 1);
+        saveQuizzesToStorage();
+        renderQuizManagement();
+        renderQuizSelection();
+        showNotification('✅ تم حذف الاختبار', 'success');
+    }
+}
+
+function exportQuiz(index) {
+    const quiz = availableQuizzes[index];
+    const dataStr = JSON.stringify(quiz, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `${quiz.title}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+}
+
+function saveQuizzesToStorage() {
+    localStorage.setItem('availableQuizzes', JSON.stringify(availableQuizzes));
+}
+
+function loadQuizzesFromStorage() {
+    const savedQuizzes = localStorage.getItem('availableQuizzes');
+    if (savedQuizzes) {
+        availableQuizzes = JSON.parse(savedQuizzes);
+    }
+}
+
+// تهيئة التطبيق
+async function initializeApp() {
+    DOM.loginBtn.addEventListener('click', startQuiz);
+    DOM.backToLogin.addEventListener('click', showLoginView);
+    DOM.tryAgain.addEventListener('click', tryAgain);
+    DOM.toggleRole.addEventListener('click', toggleTeacherMode);
+    
+    // ⭐⭐ الإضافة الجديدة: تحميل إعدادات Google Sheets
+    if (GOOGLE_SCRIPT_URL) {
+        document.getElementById('google-script-url').value = GOOGLE_SCRIPT_URL;
+        updateGoogleSheetsStatus('تم تحميل الإعدادات السابقة ✅', 'success');
+    }
+    
+    // ⭐⭐ الإضافة الجديدة: تحميل الاختبارات من التخزين المحلي
+    loadQuizzesFromStorage();
+    
+    // إعداد تبويبات لوحة المعلم
+    document.querySelectorAll('.teacher-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            // إزالة التحديد من جميع التبويبات
+            document.querySelectorAll('.teacher-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            // تحديد التبويب الحالي
+            this.classList.add('active');
+            document.getElementById(`${this.dataset.tab}-tab`).classList.add('active');
+        });
+    });
+    
+    // عرض الاختبارات المتاحة
+    renderQuizSelection();
+    
+    // تحميل النتائج من JSONBin.io
+    await updateTopStudents();
+    
+    console.log('التطبيق جاهز - متصل مع JSONBin.io' + (GOOGLE_SCRIPT_URL ? ' و Google Sheets' : ''));
+}
+
+// عرض قائمة الاختبارات المتاحة
+function renderQuizSelection() {
+    DOM.quizSelection.innerHTML = '';
+    
+    availableQuizzes.forEach((quiz, index) => {
+        const quizElement = document.createElement('div');
+        quizElement.className = 'quiz-option';
+        quizElement.textContent = quiz.title;
+        quizElement.dataset.quizIndex = index;
+        
+        quizElement.addEventListener('click', function() {
+            // إزالة التحديد من جميع الخيارات
+            document.querySelectorAll('.quiz-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // تحديد الخيار الحالي
+            this.classList.add('selected');
+        });
+        
+        DOM.quizSelection.appendChild(quizElement);
+    });
+    
+    // تحديد أول اختبار افتراضيًا
+    if (availableQuizzes.length > 0) {
+        DOM.quizSelection.firstChild.classList.add('selected');
+    }
+}
+
+// بدء الاختبار
+function startQuiz() {
+    const studentName = DOM.studentNameInput.value.trim();
+    if (!studentName) {
+        alert('يرجى إدخال اسمك');
+        return;
+    }
+    
+    // الحصول على الاختبار المحدد
+    const selectedQuizElement = document.querySelector('.quiz-option.selected');
+    if (!selectedQuizElement) {
+        alert('يرجى اختيار اختبار');
+        return;
+    }
+    
+    const quizIndex = parseInt(selectedQuizElement.dataset.quizIndex);
+    state.currentStudent = studentName;
+    state.currentQuiz = availableQuizzes[quizIndex];
+    
+    // خلط الأسئلة
+    state.shuffledQuestions = shuffleArray([...state.currentQuiz.questions]);
+    
+    state.currentQuestionIndex = 0;
+    state.score = 0;
+    state.showTranslation = true;
+    
+    DOM.loginView.style.display = 'none';
+    DOM.studentView.style.display = 'flex';
+    
+    DOM.studentNameDisplay.textContent = `مرحباً ${state.currentStudent}`;
+    DOM.questionBox.innerHTML = '<p>اضغط على زر البدء عندما تكون مستعدًا.</p>';
+    DOM.optionsContainer.innerHTML = '';
+    DOM.timerDisplay.style.display = 'none';
+    DOM.sessionControls.innerHTML = `
+        <button id="start-quiz-button" class="btn-success" onclick="startFirstQuestion()">ابدأ الاختبار</button>
+        <button class="btn-danger" onclick="showLoginView()">العودة</button>
+    `;
+    
+    updateScoreboard();
+    updateProgressBar();
+}
+
+// بدء أول سؤال
+function startFirstQuestion() {
+    DOM.correctSound.play().catch(()=>{});
+    DOM.correctSound.pause();
+    DOM.correctSound.currentTime = 0;
+    
+    DOM.timerDisplay.style.display = 'block';
+    DOM.sessionControls.innerHTML = `
+        <button class="btn-danger" onclick="endQuiz()">إنهاء الاختبار</button>
+    `;
+    
+    showQuestion();
+}
+
+// ⭐⭐ التعديل الجديد: عرض السؤال مع رأس في سطر واحد
+function showQuestion() {
+    if (state.currentQuestionIndex >= state.shuffledQuestions.length) {
+        endQuiz();
+        return;
+    }
+    
+    clearInterval(state.questionTimer);
+    
+    state.currentQuestion = state.shuffledQuestions[state.currentQuestionIndex];
+    const questionBox = DOM.questionBox;
+    const optionsContainer = DOM.optionsContainer;
+    
+    optionsContainer.className = 'layout-vertical';
+    questionBox.className = 'font-size-medium';
+    
+    // ⭐⭐ الإصلاح: معالجة النص لجعله في سطر واحد
+    let questionText = state.currentQuestion.text;
+    
+    // استبدال >>> بمسافة عادية لجعل كل شيء في سطر واحد
+    questionText = questionText.replace(/>>>/g, ' ');
+    
+    // إزالة "de" الزائدة من البداية إذا كانت موجودة
+    questionText = questionText.replace(/^de\s+/i, '');
+    
+    // تطبيق التنسيق على الكلمات بين **
+    questionText = questionText.replace(/\*(.*?)\*/g, '<span class="highlight-word">$1</span>');
+    
+    // خلط الخيارات
+    const shuffledOptions = shuffleArray([...state.currentQuestion.options]);
+    const correctShuffledIndex = shuffledOptions.indexOf(state.currentQuestion.options[state.currentQuestion.correctAnswerIndex]);
+    
+    const optionsHTML = shuffledOptions.map((opt, i) =>
+        `<button onclick="checkAnswer(this, ${i === correctShuffledIndex})">${opt}</button>`
+    ).join('');
+    
+    // إضافة زر الترجمة
+    const translationButton = `<button id="toggle-translation" onclick="toggleTranslation()">${state.showTranslation ? 'إخفاء الترجمة' : 'إظهار الترجمة'}</button>`;
+    
+    // إضافة الترجمة إذا كانت مفعلة
+    const translationHTML = state.showTranslation ? `<div class="question-translation">${state.currentQuestion.translation}</div>` : '';
+    
+    // ⭐⭐ الإصلاح: عرض السؤال في سطر واحد
+    questionBox.innerHTML = `
+        ${translationButton}
+        <div class="question-text-single-line">${questionText}</div>
+        ${translationHTML}
+    `;
+    optionsContainer.innerHTML = optionsHTML;
+    
+    updateProgressBar();
+    startTimer();
+}
+
+// تبديل عرض الترجمة
+function toggleTranslation() {
+    state.showTranslation = !state.showTranslation;
+    showQuestion(); // إعادة عرض السؤال مع التغيير
+}
+
+// بدء المؤقت
+function startTimer() {
+    let timeLeft = state.currentQuiz.timer;
+    DOM.timerDisplay.textContent = formatTime(timeLeft);
+    state.questionTimer = setInterval(() => {
+        timeLeft--;
+        DOM.timerDisplay.textContent = formatTime(timeLeft);
+        if (timeLeft <= 0) {
+            clearInterval(state.questionTimer);
+            showInstantFeedback(false);
+            setTimeout(() => {
+                state.currentQuestionIndex++;
+                showQuestion();
+            }, 2000);
+        }
+    }, 1000);
+}
+
+// التحقق من الإجابة
+function checkAnswer(button, isCorrect) {
+    clearInterval(state.questionTimer);
+    
+    const allOptions = DOM.optionsContainer.querySelectorAll('button');
+    allOptions.forEach(btn => btn.disabled = true);
+    
+    // إضافة تأثيرات بصرية
+    if (isCorrect) {
+        button.classList.add('option-correct');
+        state.score++;
+        DOM.correctSound.play();
+        showInstantFeedback(true);
+    } else {
+        button.classList.add('option-wrong');
+        DOM.wrongSound.play();
+        showInstantFeedback(false);
+        
+        // إظهار الإجابة الصحيحة
+        allOptions.forEach((btn, index) => {
+            if (index === getCorrectOptionIndex()) {
+                btn.classList.add('option-correct');
+            }
+        });
+    }
+    
+    updateScoreboard();
+    
+    // الانتقال للسؤال التالي بعد ثانيتين
+    setTimeout(() => {
+        state.currentQuestionIndex++;
+        showQuestion();
+    }, 2000);
+}
+
+// الحصول على مؤشر الخيار الصحيح بعد الخلط
+function getCorrectOptionIndex() {
+    const shuffledOptions = shuffleArray([...state.currentQuestion.options]);
+    return shuffledOptions.indexOf(state.currentQuestion.options[state.currentQuestion.correctAnswerIndex]);
+}
+
+// عرض نتيجة فورية
+function showInstantFeedback(isCorrect) {
+    const feedback = document.createElement('div');
+    feedback.className = `instant-feedback ${isCorrect ? 'feedback-correct' : 'feedback-wrong'}`;
+    feedback.textContent = isCorrect ? 'إجابة صحيحة! ✓' : 'إجابة خاطئة! ✗';
+    
+    document.body.appendChild(feedback);
+    
+    setTimeout(() => {
+        document.body.removeChild(feedback);
+    }, 2000);
+}
+
+// إنهاء الاختبار
+function endQuiz() {
+    clearInterval(state.questionTimer);
+    saveResult();
+    showResults();
+}
+
+// عرض النتائج
+function showResults() {
+    DOM.studentView.style.display = 'none';
+    DOM.resultsView.style.display = 'block';
+    
+    const percentage = Math.round((state.score / state.shuffledQuestions.length) * 100);
+    let message = '';
+    
+    if (percentage >= 90) {
+        message = `<span class="badge badge-gold">ممتاز!</span>`;
+    } else if (percentage >= 70) {
+        message = `<span class="badge badge-silver">جيد جداً</span>`;
+    } else if (percentage >= 50) {
+        message = `<span class="badge badge-bronze">مقبول</span>`;
+    } else {
+        message = `<span style="color: var(--danger-color)">يحتاج تحسين</span>`;
+    }
+    
+    DOM.studentResult.innerHTML = `
+        <h2>${state.currentStudent}</h2>
+        <p>النتيجة: ${state.score} من ${state.shuffledQuestions.length}</p>
+        <p>النسبة: ${percentage}%</p>
+        <p>${message}</p>
+    `;
+    
+    updateLeaderboard();
+}
+
+// محاولة أخرى
+function tryAgain() {
+    DOM.resultsView.style.display = 'none';
+    startQuiz();
+}
+
+// ⭐⭐ الإضافة الجديدة: تحديث دالة حفظ النتيجة
+async function saveResult() {
+    const newResult = {
+        studentName: state.currentStudent,
+        score: state.score,
+        total: state.shuffledQuestions.length,
+        percentage: Math.round((state.score / state.shuffledQuestions.length) * 100),
+        quizTitle: state.currentQuiz.title,
+        date: new Date().toLocaleDateString('ar-EG'),
+        timestamp: new Date().getTime(),
+        studentId: generateStudentId(state.currentStudent)
+    };
+
+    try {
+        // الحفظ في JSONBin.io (الكود الأصلي)
+        const currentData = await loadFromJSONBin();
+        currentData.push(newResult);
+        await saveToJSONBin(currentData);
+        console.log('تم حفظ النتيجة في السحابة بنجاح');
+        
+        // ⭐⭐ الإضافة الجديدة: الحفظ في Google Sheets
+        await sendToGoogleSheets(newResult);
+        
+    } catch (error) {
+        console.error('فشل في حفظ النتيجة:', error);
+        // نسخة احتياطية في localStorage
+        const localResults = JSON.parse(localStorage.getItem('quizResults')) || [];
+        localResults.push(newResult);
+        localStorage.setItem('quizResults', JSON.stringify(localResults));
+    }
+}
+
+// تحديث لوحة الصدارة من JSONBin.io
+async function updateLeaderboard() {
+    try {
+        const results = await loadFromJSONBin();
+        displayLeaderboard(results);
+    } catch (error) {
+        console.error('خطأ في تحميل النتائج:', error);
+        // استخدام البيانات المحلية كنسخة احتياطية
+        const localResults = JSON.parse(localStorage.getItem('quizResults')) || [];
+        displayLeaderboard(localResults);
+    }
+}
+
+// تحديث أفضل الطلاب من JSONBin.io
+async function updateTopStudents() {
+    try {
+        const results = await loadFromJSONBin();
+        displayTopStudents(results);
+    } catch (error) {
+        console.error('خطأ في تحميل أفضل الطلاب:', error);
+        const localResults = JSON.parse(localStorage.getItem('quizResults')) || [];
+        displayTopStudents(localResults);
+    }
+}
+
+// دالة مساعدة لإنشاء معرف فريد للطالب
+function generateStudentId(studentName) {
+    return studentName.replace(/\s+/g, '-').toLowerCase() + '-' + Date.now();
+}
+
+// دالة لعرض لوحة الصدارة
+function displayLeaderboard(results) {
+    const sortedResults = results.sort((a, b) => b.percentage - a.percentage);
+    
+    DOM.leaderboard.innerHTML = sortedResults.map((result, index) => {
+        let badge = '';
+        if (index === 0) badge = '<span class="badge badge-gold">🥇</span>';
+        else if (index === 1) badge = '<span class="badge badge-silver">🥈</span>';
+        else if (index === 2) badge = '<span class="badge badge-bronze">🥉</span>';
+        
+        return `
+            <tr>
+                <td>${index + 1} ${badge}</td>
+                <td>${result.studentName}</td>
+                <td>${result.score}/${result.total} (${result.percentage}%)</td>
+                <td>${result.quizTitle}</td>
+                <td>${result.date}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// دالة لعرض أفضل الطلاب
+function displayTopStudents(results) {
+    const sortedResults = results.sort((a, b) => b.percentage - a.percentage).slice(0, 5);
+    
+    if (sortedResults.length === 0) {
+        DOM.topStudents.innerHTML = '<p>لا توجد نتائج سابقة</p>';
+        return;
+    }
+    
+    DOM.topStudents.innerHTML = sortedResults.map((result, index) => {
+        let medal = '';
+        if (index === 0) medal = '🥇';
+        else if (index === 1) medal = '🥈';
+        else if (index === 2) medal = '🥉';
+        
+        return `<p>${medal} ${result.studentName}: ${result.percentage}% (${result.quizTitle})</p>`;
+    }).join('');
+}
+
+// تحديث لوحة النتائج
+function updateScoreboard() {
+    DOM.scoreboard.innerHTML = `
+        <div class="scoreboard-item">
+            <span class="scoreboard-item-name">${state.currentStudent}</span>
+            <span>${state.score}</span>
+        </div>
+    `;
+}
+
+// تحديث شريط التقدم
+function updateProgressBar() {
+    const progress = ((state.currentQuestionIndex) / state.shuffledQuestions.length) * 100;
+    DOM.progressBar.style.width = `${progress}%`;
+}
+
+// العودة لصفحة التسجيل
+function showLoginView() {
+    DOM.studentView.style.display = 'none';
+    DOM.resultsView.style.display = 'none';
+    DOM.loginView.style.display = 'flex';
+    updateTopStudents();
+}
+
+// تنسيق الوقت
+function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// خلط المصفوفة
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+// تجميع النتائج حسب الطالب
+function groupResultsByStudent(results) {
+    return results.reduce((grouped, result) => {
+        if (!grouped[result.studentName]) {
+            grouped[result.studentName] = [];
+        }
+        grouped[result.studentName].push(result);
+        return grouped;
+    }, {});
+}
+
+// دوال الإدارة المتقدمة
+async function loadAllResults() {
+    try {
+        const results = await loadFromJSONBin();
+        return results;
+    } catch (error) {
+        console.error('خطأ في تحميل جميع النتائج:', error);
+        return [];
+    }
+}
+
+// دالة لتصدير النتائج كملف Excel (CSV)
+function exportToCSV() {
+    loadAllResults().then(results => {
+        let csv = 'اسم الطالب,النتيجة,الإجمالي,النسبة,الاختبار,التاريخ\n';
+        
+        results.forEach(result => {
+            csv += `"${result.studentName}",${result.score},${result.total},${result.percentage}%,"${result.quizTitle}","${result.date}"\n`;
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `نتائج-الطلاب-${new Date().toLocaleDateString('ar-EG')}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+}
+
+// دالة لحذف جميع النتائج (للمشرف)
+async function clearAllResults() {
+    if (confirm('هل أنت متأكد من حذف جميع النتائج؟ هذا الإجراء لا يمكن التراجع عنه.')) {
+        try {
+            await saveToJSONBin([]);
+            alert('تم حذف جميع النتائج بنجاح');
+            updateLeaderboard();
+            updateTopStudents();
+        } catch (error) {
+            alert('فشل في حذف النتائج: ' + error.message);
+        }
+    }
+}
+
+// عرض/إخفاء لوحة الإدارة
+function toggleAdminPanel() {
+    if (!state.isAdminLoggedIn) {
+        showAdminLogin();
+        return;
+    }
+    
+    const panel = document.getElementById('admin-panel');
+    const overlay = document.getElementById('admin-overlay');
+    
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        overlay.style.display = 'block';
+        loadAdminResults();
+    } else {
+        panel.style.display = 'none';
+        overlay.style.display = 'none';
+    }
+}
+
+// تحميل النتائج في لوحة الإدارة
+async function loadAdminResults() {
+    const results = await loadAllResults();
+    const adminResults = document.getElementById('admin-results');
+    
+    if (results.length === 0) {
+        adminResults.innerHTML = '<p>لا توجد نتائج</p>';
+        return;
+    }
+    
+    const groupedResults = groupResultsByStudent(results);
+    adminResults.innerHTML = `
+        <h3>إحصائيات عامة</h3>
+        <p>إجمالي الطلاب: ${Object.keys(groupedResults).length}</p>
+        <p>إجمالي الاختبارات: ${results.length}</p>
+        
+        <h3>تفصيل النتائج</h3>
+        ${Object.entries(groupedResults).map(([student, tests]) => `
+            <div style="border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                <h4>${student}</h4>
+                ${tests.map(test => `
+                    <div style="margin: 5px 0; padding: 5px; background: #f9f9f9;">
+                        ${test.quizTitle}: ${test.score}/${test.total} (${test.percentage}%) - ${test.date}
+                    </div>
+                `).join('')}
+            </div>
+        `).join('')}
+    `;
+}
+
+// تهيئة التطبيق عند تحميل الصفحة
+window.onload = initializeApp;
+</script>
+
+</body>
+</html>
+```
+
+## التغييرات الرئيسية التي تمت:
+
+### 1. **إصلاح رأس السؤال في سطر واحد**:
+- أضفت نمط CSS جديد `.question-text-single-line`
+- عدلت دالة `showQuestion()` لاستبدال `>>>` بمسافات عادية
+- أزلت كلمة "de" الزائدة من بداية النص
+- جعلت السؤال كله يظهر في سطر واحد
+
+### 2. **الميزات المحفوظة**:
+- ✅ جميع ميزات لوحة المعلم
+- ✅ نظام المصادقة (admin/1234)
+- ✅ استيراد الاختبارات
+- ✅ إدارة الطلاب والنتائج
+- ✅ تكامل Google Sheets
+- ✅ تكامل JSONBin.io
+- ✅ الترجمة والإشعارات
+- ✅ المؤقت والنتائج الفورية
+
+### 3. **النتيجة النهائية**:
+الآن سيكون النص:
+```
+L'opposé de gauche
+```
+بدلاً من:
+```
+de L'opposé de gauche
+```
+
+كل شيء يعمل كما كان مع إصلاح مشكلة رأس السؤال فقط!
