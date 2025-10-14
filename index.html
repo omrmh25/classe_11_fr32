@@ -1213,6 +1213,150 @@ const DOM = {
     adminLoginModal: document.getElementById('admin-login-modal')
 };
 
+// ⭐⭐ الإضافة الجديدة: دوال Google Sheets
+async function sendToGoogleSheets(studentData) {
+    if (!GOOGLE_SCRIPT_URL) {
+        console.log('رابط Google Sheets غير مضبوط - سيتم الحفظ في JSONBin.io فقط');
+        return false;
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('name', studentData.studentName);
+        formData.append('score', studentData.score);
+        formData.append('total', studentData.total);
+        formData.append('percentage', studentData.percentage);
+        formData.append('quiz', studentData.quizTitle);
+        formData.append('date', studentData.date);
+        formData.append('timestamp', studentData.timestamp);
+        
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            console.log('✅ تم إرسال النتائج إلى Google Sheets بنجاح');
+            showNotification('✅ تم حفظ نتيجتك في Google Sheets', 'success');
+            return true;
+        } else {
+            console.error('❌ فشل في إرسال النتائج إلى Google Sheets');
+            showNotification('⚠️ تم الحفظ محلياً فقط', 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ خطأ في إرسال النتائج إلى Google Sheets:', error);
+        showNotification('⚠️ تم الحفظ محلياً فقط', 'error');
+        return false;
+    }
+}
+
+function saveGoogleScriptUrl() {
+    const url = document.getElementById('google-script-url').value.trim();
+    if (url) {
+        GOOGLE_SCRIPT_URL = url;
+        localStorage.setItem('googleScriptUrl', url);
+        showNotification('✅ تم حفظ رابط Google Sheets بنجاح', 'success');
+        updateGoogleSheetsStatus('تم حفظ الرابط بنجاح ✅', 'success');
+    } else {
+        showNotification('❌ يرجى إدخال رابط صحيح', 'error');
+    }
+}
+
+function testGoogleSheetsConnection() {
+    if (!GOOGLE_SCRIPT_URL) {
+        showNotification('❌ يرجى إدخال الرابط أولاً', 'error');
+        return;
+    }
+    
+    updateGoogleSheetsStatus('جاري اختبار الاتصال...', 'warning');
+    
+    // اختبار الاتصال بإرسال بيانات تجريبية
+    const testData = {
+        studentName: 'اختبار اتصال',
+        score: 1,
+        total: 1,
+        percentage: 100,
+        quizTitle: 'اختبار اتصال',
+        date: new Date().toLocaleDateString('ar-EG'),
+        timestamp: new Date().getTime()
+    };
+    
+    sendToGoogleSheets(testData)
+        .then(success => {
+            if (success) {
+                updateGoogleSheetsStatus('✅ الاتصال يعمل بشكل صحيح', 'success');
+            } else {
+                updateGoogleSheetsStatus('❌ فشل في الاتصال - تحقق من الرابط', 'error');
+            }
+        });
+}
+
+function updateGoogleSheetsStatus(message, type) {
+    const statusElement = document.getElementById('google-sheets-status');
+    if (statusElement) {
+        statusElement.textContent = message;
+        statusElement.style.backgroundColor = type === 'success' ? '#d4edda' : 
+                                            type === 'error' ? '#f8d7da' : '#fff3cd';
+        statusElement.style.color = type === 'success' ? '#155724' : 
+                                   type === 'error' ? '#721c24' : '#856404';
+        statusElement.style.border = `1px solid ${type === 'success' ? '#c3e6cb' : 
+                                     type === 'error' ? '#f5c6cb' : '#ffeaa7'}`;
+        statusElement.style.display = 'block';
+    }
+}
+
+function showGoogleSetupGuide() {
+    const guide = `
+🔧 دليل إعداد Google Sheets الكامل:
+
+1. اذهب إلى: script.google.com
+2. أنشئ مشروع جديد
+3. الصق كود Google Apps Script التالي:
+
+\`\`\`javascript
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.openById('YOUR_SHEET_ID').getActiveSheet();
+    
+    // استخراج البيانات من الطلب
+    var name = e.parameters.name ? e.parameters.name[0] : 'غير معروف';
+    var score = e.parameters.score ? e.parameters.score[0] : '0';
+    var total = e.parameters.total ? e.parameters.total[0] : '0';
+    var percentage = e.parameters.percentage ? e.parameters.percentage[0] : '0';
+    var quiz = e.parameters.quiz ? e.parameters.quiz[0] : 'غير معروف';
+    var date = e.parameters.date ? e.parameters.date[0] : new Date().toLocaleDateString();
+    
+    // إضافة الصف إلى الجدول
+    sheet.appendRow([
+      new Date(),
+      name,
+      score,
+      total,
+      percentage + '%',
+      quiz,
+      date
+    ]);
+    
+    return ContentService.createTextOutput(JSON.stringify({success: true}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+\`\`\`
+
+4. استبدل YOUR_SHEET_ID بمعرف جدولك
+5. انشر المشروع كـ Web App مع:
+   - Execute as: Me
+   - Who has access: Anyone
+6. انسخ الرابط والصقه في الحقل أعلاه
+    `;
+    
+    alert(guide);
+}
+
 // ⭐⭐ الإضافة الجديدة: دوال المصادقة
 function showTeacherLogin() {
     DOM.teacherLoginModal.style.display = 'flex';
@@ -1304,151 +1448,6 @@ function changeTeacherPassword() {
     document.getElementById('confirm-password').value = '';
 }
 
-// ⭐⭐ الإضافة الجديدة: دوال Google Sheets
-async function sendToGoogleSheets(studentData) {
-    if (!GOOGLE_SCRIPT_URL) {
-        console.log('رابط Google Sheets غير مضبوط - سيتم الحفظ في JSONBin.io فقط');
-        return false;
-    }
-    
-    try {
-        const formData = new FormData();
-        formData.append('name', studentData.studentName);
-        formData.append('score', studentData.score);
-        formData.append('total', studentData.total);
-        formData.append('percentage', studentData.percentage);
-        formData.append('quiz', studentData.quizTitle);
-        formData.append('date', studentData.date);
-        formData.append('timestamp', studentData.timestamp);
-        
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (response.ok) {
-            console.log('✅ تم إرسال النتائج إلى Google Sheets بنجاح');
-            showNotification('✅ تم حفظ نتيجتك في Google Sheets', 'success');
-            return true;
-        } else {
-            console.error('❌ فشل في إرسال النتائج إلى Google Sheets');
-            showNotification('⚠️ تم الحفظ محلياً فقط', 'error');
-            return false;
-        }
-    } catch (error) {
-        console.error('❌ خطأ في إرسال النتائج إلى Google Sheets:', error);
-        showNotification('⚠️ تم الحفظ محلياً فقط', 'error');
-        return false;
-    }
-}
-
-// ⭐⭐ الإضافة الجديدة: دوال إدارة Google Sheets
-function saveGoogleScriptUrl() {
-    const url = document.getElementById('google-script-url').value.trim();
-    if (url) {
-        GOOGLE_SCRIPT_URL = url;
-        localStorage.setItem('googleScriptUrl', url);
-        showNotification('✅ تم حفظ رابط Google Sheets بنجاح', 'success');
-        updateGoogleSheetsStatus('تم حفظ الرابط بنجاح ✅', 'success');
-    } else {
-        showNotification('❌ يرجى إدخال رابط صحيح', 'error');
-    }
-}
-
-function testGoogleSheetsConnection() {
-    if (!GOOGLE_SCRIPT_URL) {
-        showNotification('❌ يرجى إدخال الرابط أولاً', 'error');
-        return;
-    }
-    
-    updateGoogleSheetsStatus('جاري اختبار الاتصال...', 'warning');
-    
-    // اختبار الاتصال بإرسال بيانات تجريبية
-    const testData = {
-        studentName: 'اختبار اتصال',
-        score: 1,
-        total: 1,
-        percentage: 100,
-        quizTitle: 'اختبار اتصال',
-        date: new Date().toLocaleDateString('ar-EG'),
-        timestamp: new Date().getTime()
-    };
-    
-    sendToGoogleSheets(testData)
-        .then(success => {
-            if (success) {
-                updateGoogleSheetsStatus('✅ الاتصال يعمل بشكل صحيح', 'success');
-            } else {
-                updateGoogleSheetsStatus('❌ فشل في الاتصال - تحقق من الرابط', 'error');
-            }
-        });
-}
-
-function showGoogleSetupGuide() {
-    const guide = `
-🔧 دليل إعداد Google Sheets الكامل:
-
-1. اذهب إلى: script.google.com
-2. أنشئ مشروع جديد
-3. الصق كود Google Apps Script التالي:
-
-\`\`\`javascript
-function doPost(e) {
-  try {
-    var sheet = SpreadsheetApp.openById('YOUR_SHEET_ID').getActiveSheet();
-    var data = JSON.parse(e.postData.contents);
-    
-    sheet.appendRow([
-      new Date(),
-      data.name,
-      data.score,
-      data.total,
-      data.percentage + '%',
-      data.quiz,
-      data.date
-    ]);
-    
-    return ContentService.createTextOutput(JSON.stringify({success: true}))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-\`\`\`
-
-4. استبدل YOUR_SHEET_ID بمعرف جدولك
-5. انشر المشروع كـ Web App
-6. انسخ الرابط والصقه في الحقل أعلاه
-
-هل تريد أن أرسل لك كود Google Script كامل مع الشرح المفصل؟
-    `;
-    
-    alert(guide);
-}
-
-function updateGoogleSheetsStatus(message, type) {
-    const statusElement = document.getElementById('google-sheets-status');
-    statusElement.textContent = message;
-    statusElement.style.backgroundColor = type === 'success' ? '#d4edda' : 
-                                        type === 'error' ? '#f8d7da' : '#fff3cd';
-    statusElement.style.color = type === 'success' ? '#155724' : 
-                               type === 'error' ? '#721c24' : '#856404';
-    statusElement.style.border = `1px solid ${type === 'success' ? '#c3e6cb' : 
-                                 type === 'error' ? '#f5c6cb' : '#ffeaa7'}`;
-}
-
-function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        document.body.removeChild(notification);
-    }, 3000);
-}
-
 // دوال للتعامل مع JSONBin.io
 async function saveToJSONBin(data) {
     try {
@@ -1527,6 +1526,31 @@ function toggleTeacherMode() {
     }
 }
 
+// ⭐⭐ الإضافة الجديدة: تحميل إدارة Google Sheets
+function loadGoogleSheetsManagement() {
+    const googleSheetsManagement = document.getElementById('google-sheets-tab');
+    if (!googleSheetsManagement) return;
+    
+    googleSheetsManagement.innerHTML = `
+        <div class="card">
+            <h3>🔄 إعدادات Google Sheets</h3>
+            <div class="form-group">
+                <label>رابط Google Apps Script:</label>
+                <input type="text" id="google-script-url" value="${GOOGLE_SCRIPT_URL}" 
+                       placeholder="https://script.google.com/macros/s/..." style="width: 100%;">
+            </div>
+            <div id="google-sheets-status" style="padding: 10px; margin: 10px 0; border-radius: 5px; display: ${GOOGLE_SCRIPT_URL ? 'block' : 'none'}">
+                ${GOOGLE_SCRIPT_URL ? 'تم تحميل الإعدادات السابقة ✅' : ''}
+            </div>
+            <div class="button-group">
+                <button class="btn btn-success" onclick="saveGoogleScriptUrl()">💾 حفظ الرابط</button>
+                <button class="btn btn-warning" onclick="testGoogleSheetsConnection()">🔗 اختبار الاتصال</button>
+                <button class="btn btn-info" onclick="showGoogleSetupGuide()">📖 دليل الإعداد</button>
+            </div>
+        </div>
+    `;
+}
+
 function loadTeacherPanel() {
     // تحميل إدارة الاختبارات
     renderQuizManagement();
@@ -1539,10 +1563,15 @@ function loadTeacherPanel() {
     
     // إعداد استيراد الاختبارات
     setupImportSection();
+    
+    // ⭐⭐ الإضافة الجديدة: تحميل إدارة Google Sheets
+    loadGoogleSheetsManagement();
 }
 
 function renderQuizManagement() {
     const quizManagement = document.getElementById('quiz-management');
+    if (!quizManagement) return;
+    
     quizManagement.innerHTML = '';
     
     availableQuizzes.forEach((quiz, index) => {
@@ -1553,9 +1582,9 @@ function renderQuizManagement() {
             <p>عدد الأسئلة: ${quiz.questions.length}</p>
             <p>الوقت: ${quiz.timer} ثانية</p>
             <div class="quiz-actions">
-                <button class="btn-primary btn-sm" onclick="editQuiz(${index})">تعديل</button>
-                <button class="btn-danger btn-sm" onclick="deleteQuiz(${index})">حذف</button>
-                <button class="btn-warning btn-sm" onclick="exportQuiz(${index})">تصدير</button>
+                <button class="btn btn-primary btn-sm" onclick="editQuiz(${index})">تعديل</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteQuiz(${index})">حذف</button>
+                <button class="btn btn-warning btn-sm" onclick="exportQuiz(${index})">تصدير</button>
             </div>
         `;
         quizManagement.appendChild(quizCard);
@@ -1564,6 +1593,8 @@ function renderQuizManagement() {
 
 function renderStudentsManagement() {
     const studentsManagement = document.getElementById('students-management');
+    if (!studentsManagement) return;
+    
     studentsManagement.innerHTML = '<p>جاري تحميل بيانات الطلاب...</p>';
     
     loadFromJSONBin().then(results => {
@@ -1589,6 +1620,8 @@ function renderStudentsManagement() {
 
 function renderTeacherResults() {
     const teacherResults = document.getElementById('teacher-results');
+    if (!teacherResults) return;
+    
     teacherResults.innerHTML = '<p>جاري تحميل النتائج...</p>';
     
     loadFromJSONBin().then(results => {
@@ -1653,6 +1686,8 @@ function calculateStatistics(results) {
 function setupImportSection() {
     const dropzone = document.getElementById('import-dropzone');
     const fileInput = document.getElementById('quiz-file-input');
+    
+    if (!dropzone || !fileInput) return;
     
     // إعداد سحب وإفلات الملفات
     dropzone.addEventListener('dragover', (e) => {
@@ -1751,6 +1786,8 @@ function showImportPreview(quizData) {
     const previewContent = document.getElementById('preview-content');
     const importPreview = document.getElementById('import-preview');
     
+    if (!previewContent || !importPreview) return;
+    
     previewContent.innerHTML = `
         <div class="card">
             <h4>${quizData.title}</h4>
@@ -1785,8 +1822,11 @@ function confirmImport() {
 }
 
 function cancelImport() {
-    document.getElementById('import-preview').style.display = 'none';
-    document.getElementById('quiz-file-input').value = '';
+    const importPreview = document.getElementById('import-preview');
+    const fileInput = document.getElementById('quiz-file-input');
+    
+    if (importPreview) importPreview.style.display = 'none';
+    if (fileInput) fileInput.value = '';
     delete window.importQuizData;
 }
 
@@ -1851,14 +1891,15 @@ function loadQuizzesFromStorage() {
 
 // تهيئة التطبيق
 async function initializeApp() {
-    DOM.loginBtn.addEventListener('click', startQuiz);
-    DOM.backToLogin.addEventListener('click', showLoginView);
-    DOM.tryAgain.addEventListener('click', tryAgain);
-    DOM.toggleRole.addEventListener('click', toggleTeacherMode);
+    if (DOM.loginBtn) DOM.loginBtn.addEventListener('click', startQuiz);
+    if (DOM.backToLogin) DOM.backToLogin.addEventListener('click', showLoginView);
+    if (DOM.tryAgain) DOM.tryAgain.addEventListener('click', tryAgain);
+    if (DOM.toggleRole) DOM.toggleRole.addEventListener('click', toggleTeacherMode);
     
     // ⭐⭐ الإضافة الجديدة: تحميل إعدادات Google Sheets
     if (GOOGLE_SCRIPT_URL) {
-        document.getElementById('google-script-url').value = GOOGLE_SCRIPT_URL;
+        const urlInput = document.getElementById('google-script-url');
+        if (urlInput) urlInput.value = GOOGLE_SCRIPT_URL;
         updateGoogleSheetsStatus('تم تحميل الإعدادات السابقة ✅', 'success');
     }
     
@@ -1874,7 +1915,9 @@ async function initializeApp() {
             
             // تحديد التبويب الحالي
             this.classList.add('active');
-            document.getElementById(`${this.dataset.tab}-tab`).classList.add('active');
+            const tabId = `${this.dataset.tab}-tab`;
+            const tabContent = document.getElementById(tabId);
+            if (tabContent) tabContent.classList.add('active');
         });
     });
     
@@ -1889,6 +1932,8 @@ async function initializeApp() {
 
 // عرض قائمة الاختبارات المتاحة
 function renderQuizSelection() {
+    if (!DOM.quizSelection) return;
+    
     DOM.quizSelection.innerHTML = '';
     
     availableQuizzes.forEach((quiz, index) => {
@@ -1912,13 +1957,14 @@ function renderQuizSelection() {
     
     // تحديد أول اختبار افتراضيًا
     if (availableQuizzes.length > 0) {
-        DOM.quizSelection.firstChild.classList.add('selected');
+        const firstQuiz = DOM.quizSelection.firstChild;
+        if (firstQuiz) firstQuiz.classList.add('selected');
     }
 }
 
 // بدء الاختبار
 function startQuiz() {
-    const studentName = DOM.studentNameInput.value.trim();
+    const studentName = DOM.studentNameInput ? DOM.studentNameInput.value.trim() : '';
     if (!studentName) {
         alert('يرجى إدخال اسمك');
         return;
@@ -1942,16 +1988,16 @@ function startQuiz() {
     state.score = 0;
     state.showTranslation = true;
     
-    DOM.loginView.style.display = 'none';
-    DOM.studentView.style.display = 'flex';
+    if (DOM.loginView) DOM.loginView.style.display = 'none';
+    if (DOM.studentView) DOM.studentView.style.display = 'flex';
     
-    DOM.studentNameDisplay.textContent = `مرحباً ${state.currentStudent}`;
-    DOM.questionBox.innerHTML = '<p>اضغط على زر البدء عندما تكون مستعدًا.</p>';
-    DOM.optionsContainer.innerHTML = '';
-    DOM.timerDisplay.style.display = 'none';
-    DOM.sessionControls.innerHTML = `
-        <button id="start-quiz-button" class="btn-success" onclick="startFirstQuestion()">ابدأ الاختبار</button>
-        <button class="btn-danger" onclick="showLoginView()">العودة</button>
+    if (DOM.studentNameDisplay) DOM.studentNameDisplay.textContent = `مرحباً ${state.currentStudent}`;
+    if (DOM.questionBox) DOM.questionBox.innerHTML = '<p>اضغط على زر البدء عندما تكون مستعدًا.</p>';
+    if (DOM.optionsContainer) DOM.optionsContainer.innerHTML = '';
+    if (DOM.timerDisplay) DOM.timerDisplay.style.display = 'none';
+    if (DOM.sessionControls) DOM.sessionControls.innerHTML = `
+        <button id="start-quiz-button" class="btn btn-success" onclick="startFirstQuestion()">ابدأ الاختبار</button>
+        <button class="btn btn-danger" onclick="showLoginView()">العودة</button>
     `;
     
     updateScoreboard();
@@ -1960,13 +2006,15 @@ function startQuiz() {
 
 // بدء أول سؤال
 function startFirstQuestion() {
-    DOM.correctSound.play().catch(()=>{});
-    DOM.correctSound.pause();
-    DOM.correctSound.currentTime = 0;
+    if (DOM.correctSound) {
+        DOM.correctSound.play().catch(()=>{});
+        DOM.correctSound.pause();
+        DOM.correctSound.currentTime = 0;
+    }
     
-    DOM.timerDisplay.style.display = 'block';
-    DOM.sessionControls.innerHTML = `
-        <button class="btn-danger" onclick="endQuiz()">إنهاء الاختبار</button>
+    if (DOM.timerDisplay) DOM.timerDisplay.style.display = 'block';
+    if (DOM.sessionControls) DOM.sessionControls.innerHTML = `
+        <button class="btn btn-danger" onclick="endQuiz()">إنهاء الاختبار</button>
     `;
     
     showQuestion();
@@ -1984,6 +2032,8 @@ function showQuestion() {
     state.currentQuestion = state.shuffledQuestions[state.currentQuestionIndex];
     const questionBox = DOM.questionBox;
     const optionsContainer = DOM.optionsContainer;
+    
+    if (!questionBox || !optionsContainer) return;
     
     optionsContainer.className = 'layout-vertical';
     questionBox.className = 'font-size-medium';
@@ -2035,10 +2085,10 @@ function toggleTranslation() {
 // بدء المؤقت
 function startTimer() {
     let timeLeft = state.currentQuiz.timer;
-    DOM.timerDisplay.textContent = formatTime(timeLeft);
+    if (DOM.timerDisplay) DOM.timerDisplay.textContent = formatTime(timeLeft);
     state.questionTimer = setInterval(() => {
         timeLeft--;
-        DOM.timerDisplay.textContent = formatTime(timeLeft);
+        if (DOM.timerDisplay) DOM.timerDisplay.textContent = formatTime(timeLeft);
         if (timeLeft <= 0) {
             clearInterval(state.questionTimer);
             showInstantFeedback(false);
@@ -2054,18 +2104,18 @@ function startTimer() {
 function checkAnswer(button, isCorrect) {
     clearInterval(state.questionTimer);
     
-    const allOptions = DOM.optionsContainer.querySelectorAll('button');
+    const allOptions = DOM.optionsContainer ? DOM.optionsContainer.querySelectorAll('button') : [];
     allOptions.forEach(btn => btn.disabled = true);
     
     // إضافة تأثيرات بصرية
     if (isCorrect) {
         button.classList.add('option-correct');
         state.score++;
-        DOM.correctSound.play();
+        if (DOM.correctSound) DOM.correctSound.play();
         showInstantFeedback(true);
     } else {
         button.classList.add('option-wrong');
-        DOM.wrongSound.play();
+        if (DOM.wrongSound) DOM.wrongSound.play();
         showInstantFeedback(false);
         
         // إظهار الإجابة الصحيحة
@@ -2100,7 +2150,9 @@ function showInstantFeedback(isCorrect) {
     document.body.appendChild(feedback);
     
     setTimeout(() => {
-        document.body.removeChild(feedback);
+        if (document.body.contains(feedback)) {
+            document.body.removeChild(feedback);
+        }
     }, 2000);
 }
 
@@ -2113,8 +2165,8 @@ function endQuiz() {
 
 // عرض النتائج
 function showResults() {
-    DOM.studentView.style.display = 'none';
-    DOM.resultsView.style.display = 'block';
+    if (DOM.studentView) DOM.studentView.style.display = 'none';
+    if (DOM.resultsView) DOM.resultsView.style.display = 'block';
     
     const percentage = Math.round((state.score / state.shuffledQuestions.length) * 100);
     let message = '';
@@ -2129,19 +2181,21 @@ function showResults() {
         message = `<span style="color: var(--danger-color)">يحتاج تحسين</span>`;
     }
     
-    DOM.studentResult.innerHTML = `
-        <h2>${state.currentStudent}</h2>
-        <p>النتيجة: ${state.score} من ${state.shuffledQuestions.length}</p>
-        <p>النسبة: ${percentage}%</p>
-        <p>${message}</p>
-    `;
+    if (DOM.studentResult) {
+        DOM.studentResult.innerHTML = `
+            <h2>${state.currentStudent}</h2>
+            <p>النتيجة: ${state.score} من ${state.shuffledQuestions.length}</p>
+            <p>النسبة: ${percentage}%</p>
+            <p>${message}</p>
+        `;
+    }
     
     updateLeaderboard();
 }
 
 // محاولة أخرى
 function tryAgain() {
-    DOM.resultsView.style.display = 'none';
+    if (DOM.resultsView) DOM.resultsView.style.display = 'none';
     startQuiz();
 }
 
@@ -2209,6 +2263,8 @@ function generateStudentId(studentName) {
 
 // دالة لعرض لوحة الصدارة
 function displayLeaderboard(results) {
+    if (!DOM.leaderboard) return;
+    
     const sortedResults = results.sort((a, b) => b.percentage - a.percentage);
     
     DOM.leaderboard.innerHTML = sortedResults.map((result, index) => {
@@ -2231,6 +2287,8 @@ function displayLeaderboard(results) {
 
 // دالة لعرض أفضل الطلاب
 function displayTopStudents(results) {
+    if (!DOM.topStudents) return;
+    
     const sortedResults = results.sort((a, b) => b.percentage - a.percentage).slice(0, 5);
     
     if (sortedResults.length === 0) {
@@ -2250,6 +2308,8 @@ function displayTopStudents(results) {
 
 // تحديث لوحة النتائج
 function updateScoreboard() {
+    if (!DOM.scoreboard) return;
+    
     DOM.scoreboard.innerHTML = `
         <div class="scoreboard-item">
             <span class="scoreboard-item-name">${state.currentStudent}</span>
@@ -2260,15 +2320,17 @@ function updateScoreboard() {
 
 // تحديث شريط التقدم
 function updateProgressBar() {
+    if (!DOM.progressBar) return;
+    
     const progress = ((state.currentQuestionIndex) / state.shuffledQuestions.length) * 100;
     DOM.progressBar.style.width = `${progress}%`;
 }
 
 // العودة لصفحة التسجيل
 function showLoginView() {
-    DOM.studentView.style.display = 'none';
-    DOM.resultsView.style.display = 'none';
-    DOM.loginView.style.display = 'flex';
+    if (DOM.studentView) DOM.studentView.style.display = 'none';
+    if (DOM.resultsView) DOM.resultsView.style.display = 'none';
+    if (DOM.loginView) DOM.loginView.style.display = 'flex';
     updateTopStudents();
 }
 
@@ -2357,13 +2419,15 @@ function toggleAdminPanel() {
     const panel = document.getElementById('admin-panel');
     const overlay = document.getElementById('admin-overlay');
     
-    if (panel.style.display === 'none') {
-        panel.style.display = 'block';
-        overlay.style.display = 'block';
-        loadAdminResults();
-    } else {
-        panel.style.display = 'none';
-        overlay.style.display = 'none';
+    if (panel && overlay) {
+        if (panel.style.display === 'none') {
+            panel.style.display = 'block';
+            overlay.style.display = 'block';
+            loadAdminResults();
+        } else {
+            panel.style.display = 'none';
+            overlay.style.display = 'none';
+        }
     }
 }
 
@@ -2371,6 +2435,8 @@ function toggleAdminPanel() {
 async function loadAdminResults() {
     const results = await loadAllResults();
     const adminResults = document.getElementById('admin-results');
+    
+    if (!adminResults) return;
     
     if (results.length === 0) {
         adminResults.innerHTML = '<p>لا توجد نتائج</p>';
@@ -2397,9 +2463,21 @@ async function loadAdminResults() {
     `;
 }
 
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+        }
+    }, 3000);
+}
+
 // تهيئة التطبيق عند تحميل الصفحة
 window.onload = initializeApp;
 </script>
-
 </body>
 </html>
