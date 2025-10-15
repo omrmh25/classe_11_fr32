@@ -1215,9 +1215,15 @@ const DOM = {
 
 // ⭐⭐ الإضافة الجديدة: دوال Google Sheets
 async function sendToGoogleSheets(studentData) {
-    if (!GOOGLE_SCRIPT_URL) return false;
+    if (!GOOGLE_SCRIPT_URL) {
+        console.log('رابط Google Sheets غير مضبوط');
+        return false;
+    }
     
     try {
+        console.log('🔄 بدء إرسال البيانات إلى Google Sheets...');
+        
+        // إعداد البيانات
         const requestData = {
             studentName: studentData.studentName,
             score: studentData.score.toString(),
@@ -1228,6 +1234,9 @@ async function sendToGoogleSheets(studentData) {
             timestamp: studentData.timestamp.toString()
         };
         
+        console.log('📤 البيانات المرسلة:', requestData);
+        
+        // إرسال الطلب
         const response = await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
             headers: {
@@ -1236,19 +1245,32 @@ async function sendToGoogleSheets(studentData) {
             body: JSON.stringify(requestData)
         });
         
+        console.log('📥 حالة الاستجابة:', response.status, response.statusText);
+        
         if (response.ok) {
             const result = await response.json();
+            console.log('✅ استجابة ناجحة:', result);
+            
             if (result.success) {
                 showNotification('✅ تم حفظ نتيجتك في Google Sheets', 'success');
                 return true;
+            } else {
+                console.error('❌ خطأ من السكريبت:', result.error);
+                showNotification('⚠️ خطأ في الحفظ: ' + result.error, 'error');
+                return false;
             }
+        } else {
+            console.error('❌ فشل في الاتصال:', response.status);
+            showNotification('⚠️ فشل في الاتصال بالسيرفر', 'error');
+            return false;
         }
-        return false;
     } catch (error) {
-        console.error('خطأ في الإرسال:', error);
+        console.error('❌ خطأ في الإرسال:', error);
+        showNotification('⚠️ خطأ في الشبكة', 'error');
         return false;
     }
-}function saveGoogleScriptUrl() {
+}
+function saveGoogleScriptUrl() {
     const url = document.getElementById('google-script-url').value.trim();
     if (url) {
         GOOGLE_SCRIPT_URL = url;
