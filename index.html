@@ -1269,7 +1269,11 @@ async function sendToGoogleSheets(studentData) {
         showNotification('⚠️ خطأ في الشبكة', 'error');
         return false;
     }
-}
+}  
+
+
+
+
 function saveGoogleScriptUrl() {
     const url = document.getElementById('google-script-url').value.trim();
     if (url) {
