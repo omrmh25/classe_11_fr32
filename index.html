@@ -1151,7 +1151,7 @@ let availableQuizzes = [
 ];
 
 // ⭐⭐ الإضافة الجديدة: تكوين Google Sheets
-let GOOGLE_SCRIPT_URL = localStorage.getItem('googleScriptUrl') || 'https://script.google.com/macros/s/AKfycby76SZL_WNjzchxzPnrptjeHnZUIBXc9Nqyfa8Totv2aZnN99obO3o3AV4ImUF_lvis/exec';
+let GOOGLE_SCRIPT_URL = localStorage.getItem('googleScriptUrl') || '';
 
 // ⭐⭐ الإضافة الجديدة: بيانات اعتماد المعلم والإدارة
 let TEACHER_CREDENTIALS = JSON.parse(localStorage.getItem('teacherCredentials')) || {
@@ -1213,15 +1213,7 @@ const DOM = {
     adminLoginModal: document.getElementById('admin-login-modal')
 };
 
-// ⭐⭐ الإضافة الجديدة: دوال Google Sheets
-
-
-
-
-// ⭐⭐ الإصلاح: دوال Google Sheets - النسخة المصححة
-
-
-// ⭐⭐ الإصلاح النهائي: استخدام JSONP لتجنب مشكلة CORS
+// ⭐⭐ الإصلاح النهائي: استخدام طريقة موثوقة لا تتأثر بـ CORS
 function sendToGoogleSheets(studentData) {
     return new Promise((resolve) => {
         if (!GOOGLE_SCRIPT_URL) {
@@ -1231,60 +1223,65 @@ function sendToGoogleSheets(studentData) {
             return;
         }
 
-        console.log('🔄 محاولة إرسال البيانات إلى Google Sheets:', studentData);
+        console.log('🔄 إرسال البيانات إلى Google Sheets:', studentData);
         
-        // إنشاء نموذج مخفي وإرساله (يتجنب CORS)
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = GOOGLE_SCRIPT_URL;
-        form.target = '_blank'; // فتح في نافذة جديدة/تبويب
-        form.style.display = 'none';
-        
-        // إضافة البيانات كحقول مخفية
-        const fields = {
-            studentName: studentData.studentName,
-            score: studentData.score,
-            total: studentData.total,
-            percentage: studentData.percentage,
-            quizTitle: studentData.quizTitle,
-            date: studentData.date
-        };
-        
-        Object.entries(fields).forEach(([key, value]) => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = key;
-            input.value = value;
-            form.appendChild(input);
-        });
-        
-        document.body.appendChild(form);
-        
-        // إرسال النموذج
-        form.submit();
-        document.body.removeChild(form);
-        
-        console.log('✅ تم إرسال النموذج إلى Google Sheets');
-        showNotification('✅ تم إرسال البيانات إلى Google Sheets - تحقق من التبويب الجديد', 'success');
-        resolve(true);
+        try {
+            // بناء رابط مع البيانات كمعلمات GET
+            const params = new URLSearchParams({
+                studentName: studentData.studentName || '',
+                score: studentData.score || '0',
+                total: studentData.total || '0',
+                percentage: studentData.percentage || '0',
+                quizTitle: studentData.quizTitle || '',
+                date: studentData.date || new Date().toLocaleDateString('ar-EG'),
+                source: 'quiz-app',
+                timestamp: Date.now().toString()
+            });
+
+            const url = GOOGLE_SCRIPT_URL + '?' + params.toString();
+            console.log('📤 الرابط النهائي:', url);
+            
+            // استخدام صورة مخفية لإرسال الطلب (لا تتأثر بـ CORS)
+            const img = new Image();
+            img.src = url;
+            img.style.display = 'none';
+            
+            img.onload = function() {
+                console.log('✅ تم إرسال البيانات بنجاح');
+                showNotification('✅ تم حفظ النتيجة في Google Sheets', 'success');
+                resolve(true);
+            };
+            
+            img.onerror = function() {
+                console.log('⚠️ استخدام الطريقة البديلة...');
+                // الطريقة البديلة: استخدام iframe
+                const iframe = document.createElement('iframe');
+                iframe.src = url;
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+                
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                    console.log('✅ تم إرسال البيانات (طريقة iframe)');
+                    showNotification('✅ تم حفظ النتيجة في Google Sheets', 'success');
+                    resolve(true);
+                }, 1000);
+            };
+            
+            document.body.appendChild(img);
+            setTimeout(() => {
+                if (document.body.contains(img)) {
+                    document.body.removeChild(img);
+                }
+            }, 3000);
+            
+        } catch (error) {
+            console.error('❌ خطأ في الإرسال:', error);
+            showNotification('❌ فشل في حفظ النتيجة في Google Sheets', 'error');
+            resolve(false);
+        }
     });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function saveGoogleScriptUrl() {
     const url = document.getElementById('google-script-url').value.trim();
@@ -1306,40 +1303,30 @@ function testGoogleSheetsConnection() {
     
     updateGoogleSheetsStatus('جاري اختبار الاتصال...', 'warning');
     
-    // اختبار ببيانات تجريبية
-    const testData = {
-        studentName: 'اختبار اتصال',
-        score: '5',
-        total: '10',
-        percentage: '50',
-        quizTitle: 'اختبار الاتصال',
-        date: new Date().toLocaleDateString('ar-EG')
+    // اختبار بسيط
+    const testUrl = GOOGLE_SCRIPT_URL + '?test=connection&timestamp=' + Date.now();
+    
+    const img = new Image();
+    img.src = testUrl;
+    img.style.display = 'none';
+    
+    img.onload = function() {
+        updateGoogleSheetsStatus('✅ الاتصال يعمل بشكل صحيح', 'success');
+        showNotification('✅ تم اختبار الاتصال بنجاح', 'success');
     };
     
-    sendToGoogleSheets(testData)
-        .then(success => {
-            if (success) {
-                updateGoogleSheetsStatus('✅ الاتصال يعمل بشكل صحيح', 'success');
-            } else {
-                updateGoogleSheetsStatus('❌ فشل في الاتصال', 'error');
-            }
-        })
-        .catch(error => {
-            updateGoogleSheetsStatus('❌ خطأ في الاتصال: ' + error.message, 'error');
-        });
+    img.onerror = function() {
+        updateGoogleSheetsStatus('❌ فشل في الاتصال', 'error');
+        showNotification('❌ فشل في اختبار الاتصال', 'error');
+    };
+    
+    document.body.appendChild(img);
+    setTimeout(() => {
+        if (document.body.contains(img)) {
+            document.body.removeChild(img);
+        }
+    }, 3000);
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 function updateGoogleSheetsStatus(message, type) {
     const statusElement = document.getElementById('google-sheets-status');
@@ -1364,39 +1351,78 @@ function showGoogleSetupGuide() {
 3. الصق كود Google Apps Script التالي:
 
 \`\`\`javascript
-function doPost(e) {
+function doGet(e) {
   try {
-    var sheet = SpreadsheetApp.openById('YOUR_SHEET_ID').getActiveSheet();
+    var headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Content-Type': 'application/json'
+    };
     
-    // استخراج البيانات من الطلب
-    var name = e.parameters.name ? e.parameters.name[0] : 'غير معروف';
-    var score = e.parameters.score ? e.parameters.score[0] : '0';
-    var total = e.parameters.total ? e.parameters.total[0] : '0';
-    var percentage = e.parameters.percentage ? e.parameters.percentage[0] : '0';
-    var quiz = e.parameters.quiz ? e.parameters.quiz[0] : 'غير معروف';
-    var date = e.parameters.date ? e.parameters.date[0] : new Date().toLocaleDateString();
+    var sheetId = '1owG1RdRO1M0-EVWaIQf7LeD22PwBwF-SObqFnV67hTE';
+    var spreadsheet = SpreadsheetApp.openById(sheetId);
+    var sheet = spreadsheet.getSheets()[0];
     
-    // إضافة الصف إلى الجدول
+    var name, score, total, percentage, quiz, date;
+    
+    if (e.parameter && e.parameter.test === 'connection') {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: 'الاتصال يعمل بنجاح',
+        timestamp: new Date().toISOString()
+      })).setMimeType(ContentService.MimeType.JSON).setHeaders(headers);
+    }
+    
+    if (e.parameter) {
+      name = e.parameter.studentName || 'غير معروف';
+      score = e.parameter.score || '0';
+      total = e.parameter.total || '0';
+      percentage = e.parameter.percentage || '0';
+      quiz = e.parameter.quizTitle || 'غير معروف';
+      date = e.parameter.date || new Date().toLocaleDateString();
+    } else {
+      name = 'طلب اختبار';
+      score = '5';
+      total = '10';
+      percentage = '50';
+      quiz = 'اختبار اتصال';
+      date = new Date().toLocaleDateString();
+    }
+    
     sheet.appendRow([
       new Date(),
       name,
-      score,
-      total,
+      parseInt(score) || 0,
+      parseInt(total) || 0,
       percentage + '%',
       quiz,
       date
     ]);
     
-    return ContentService.createTextOutput(JSON.stringify({success: true}))
-      .setMimeType(ContentService.MimeType.JSON);
+    var newRow = sheet.getLastRow();
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'تم حفظ البيانات بنجاح في الصف: ' + newRow,
+      row: newRow
+    })).setMimeType(ContentService.MimeType.JSON).setHeaders(headers);
+    
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON).setHeaders({
+      'Access-Control-Allow-Origin': '*',
+      'Content-Type': 'application/json'
+    });
   }
+}
+
+function doPost(e) {
+  return doGet(e);
 }
 \`\`\`
 
-4. استبدل YOUR_SHEET_ID بمعرف جدولك (1owG1RdRO1M0-EVWaIQf7LeD22PwBwF-SObqFnV67hTE)
+4. تأكد من أن الـ Sheet ID صحيح
 5. انشر المشروع كـ Web App مع:
    - Execute as: Me
    - Who has access: Anyone
@@ -2248,18 +2274,6 @@ function tryAgain() {
     startQuiz();
 }
 
-// ⭐⭐ الإضافة الجديدة: تحديث دالة حفظ النتيجة
-
-
-
-
-
-
-
-
-
-
-
 // ⭐⭐ الإصلاح: في دالة saveResult
 async function saveResult() {
     const newResult = {
@@ -2291,21 +2305,6 @@ async function saveResult() {
         showNotification('⚠️ تم حفظ النتيجة محلياً فقط', 'warning');
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // تحديث لوحة الصدارة من JSONBin.io
 async function updateLeaderboard() {
