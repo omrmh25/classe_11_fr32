@@ -1216,15 +1216,15 @@ const DOM = {
 // ⭐⭐ الإضافة الجديدة: دوال Google Sheets
 async function sendToGoogleSheets(studentData) {
     if (!GOOGLE_SCRIPT_URL) {
-        console.log('رابط Google Sheets غير مضبوط - سيتم الحفظ في JSONBin.io فقط');
+        console.log('رابط Google Sheets غير مضبوط');
         return false;
     }
     
     try {
-        console.log('🔄 محاولة إرسال البيانات إلى Google Sheets:', studentData);
+        console.log('🔄 بدء إرسال البيانات إلى Google Sheets...');
         
-        // الطريقة 1: إرسال كـ JSON
-        const jsonData = {
+        // إعداد البيانات
+        const requestData = {
             studentName: studentData.studentName,
             score: studentData.score.toString(),
             total: studentData.total.toString(),
@@ -1234,33 +1234,39 @@ async function sendToGoogleSheets(studentData) {
             timestamp: studentData.timestamp.toString()
         };
         
-        console.log('📤 البيانات المرسلة (JSON):', jsonData);
+        console.log('📤 البيانات المرسلة:', requestData);
         
+        // إرسال الطلب
         const response = await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(jsonData)
+            body: JSON.stringify(requestData)
         });
         
         console.log('📥 حالة الاستجابة:', response.status, response.statusText);
         
         if (response.ok) {
             const result = await response.json();
-            console.log('✅ استجابة Google Sheets:', result);
-            showNotification('✅ تم حفظ نتيجتك في Google Sheets', 'success');
-            return true;
+            console.log('✅ استجابة ناجحة:', result);
+            
+            if (result.success) {
+                showNotification('✅ تم حفظ نتيجتك في Google Sheets', 'success');
+                return true;
+            } else {
+                console.error('❌ خطأ من السكريبت:', result.error);
+                showNotification('⚠️ خطأ في الحفظ: ' + result.error, 'error');
+                return false;
+            }
         } else {
-            console.error('❌ فشل في إرسال النتائج إلى Google Sheets:', response.status);
-            const errorText = await response.text();
-            console.error('❌ تفاصيل الخطأ:', errorText);
-            showNotification('⚠️ تم الحفظ محلياً فقط', 'error');
+            console.error('❌ فشل في الاتصال:', response.status);
+            showNotification('⚠️ فشل في الاتصال بالسيرفر', 'error');
             return false;
         }
     } catch (error) {
-        console.error('❌ خطأ في إرسال النتائج إلى Google Sheets:', error);
-        showNotification('⚠️ تم الحفظ محلياً فقط', 'error');
+        console.error('❌ خطأ في الإرسال:', error);
+        showNotification('⚠️ خطأ في الشبكة', 'error');
         return false;
     }
 }
