@@ -1151,7 +1151,7 @@ let availableQuizzes = [
 ];
 
 // ⭐⭐ الإضافة الجديدة: تكوين Google Sheets
-let GOOGLE_SCRIPT_URL = localStorage.getItem('googleScriptUrl') || 'https://script.google.com/macros/s/AKfycbzi5tzP_muR8Yz29TrfcuHmnzrZdR7QlNXGhUtvQ2yCj5NJgDu_MxOWwFodXYhlh0Df/exec';
+let GOOGLE_SCRIPT_URL = localStorage.getItem('googleScriptUrl') || 'https://script.google.com/macros/s/AKfycby76SZL_WNjzchxzPnrptjeHnZUIBXc9Nqyfa8Totv2aZnN99obO3o3AV4ImUF_lvis/exec';
 
 // ⭐⭐ الإضافة الجديدة: بيانات اعتماد المعلم والإدارة
 let TEACHER_CREDENTIALS = JSON.parse(localStorage.getItem('teacherCredentials')) || {
@@ -1221,26 +1221,40 @@ async function sendToGoogleSheets(studentData) {
     }
     
     try {
-        const formData = new FormData();
-        formData.append('name', studentData.studentName);
-        formData.append('score', studentData.score);
-        formData.append('total', studentData.total);
-        formData.append('percentage', studentData.percentage);
-        formData.append('quiz', studentData.quizTitle);
-        formData.append('date', studentData.date);
-        formData.append('timestamp', studentData.timestamp);
+        console.log('🔄 محاولة إرسال البيانات إلى Google Sheets:', studentData);
+        
+        // الطريقة 1: إرسال كـ JSON
+        const jsonData = {
+            studentName: studentData.studentName,
+            score: studentData.score.toString(),
+            total: studentData.total.toString(),
+            percentage: studentData.percentage.toString(),
+            quizTitle: studentData.quizTitle,
+            date: studentData.date,
+            timestamp: studentData.timestamp.toString()
+        };
+        
+        console.log('📤 البيانات المرسلة (JSON):', jsonData);
         
         const response = await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(jsonData)
         });
         
+        console.log('📥 حالة الاستجابة:', response.status, response.statusText);
+        
         if (response.ok) {
-            console.log('✅ تم إرسال النتائج إلى Google Sheets بنجاح');
+            const result = await response.json();
+            console.log('✅ استجابة Google Sheets:', result);
             showNotification('✅ تم حفظ نتيجتك في Google Sheets', 'success');
             return true;
         } else {
-            console.error('❌ فشل في إرسال النتائج إلى Google Sheets');
+            console.error('❌ فشل في إرسال النتائج إلى Google Sheets:', response.status);
+            const errorText = await response.text();
+            console.error('❌ تفاصيل الخطأ:', errorText);
             showNotification('⚠️ تم الحفظ محلياً فقط', 'error');
             return false;
         }
@@ -1250,7 +1264,6 @@ async function sendToGoogleSheets(studentData) {
         return false;
     }
 }
-
 function saveGoogleScriptUrl() {
     const url = document.getElementById('google-script-url').value.trim();
     if (url) {
