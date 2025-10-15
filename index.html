@@ -1219,37 +1219,61 @@ const DOM = {
 
 
 // ⭐⭐ الإصلاح: دوال Google Sheets - النسخة المصححة
-async function sendToGoogleSheets(studentData) {
-    if (!GOOGLE_SCRIPT_URL) {
-        console.log('❌ لم يتم تعيين رابط Google Script');
-        return false;
-    }
-    
-    try {
-        // إرسال البيانات كـ JSON في body الطلب
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(studentData)
+
+
+// ⭐⭐ الإصلاح النهائي: استخدام JSONP لتجنب مشكلة CORS
+function sendToGoogleSheets(studentData) {
+    return new Promise((resolve) => {
+        if (!GOOGLE_SCRIPT_URL) {
+            console.log('❌ لم يتم تعيين رابط Google Script');
+            showNotification('❌ لم يتم تعيين رابط Google Sheets', 'error');
+            resolve(false);
+            return;
+        }
+
+        console.log('🔄 محاولة إرسال البيانات إلى Google Sheets:', studentData);
+        
+        // إنشاء نموذج مخفي وإرساله (يتجنب CORS)
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = GOOGLE_SCRIPT_URL;
+        form.target = '_blank'; // فتح في نافذة جديدة/تبويب
+        form.style.display = 'none';
+        
+        // إضافة البيانات كحقول مخفية
+        const fields = {
+            studentName: studentData.studentName,
+            score: studentData.score,
+            total: studentData.total,
+            percentage: studentData.percentage,
+            quizTitle: studentData.quizTitle,
+            date: studentData.date
+        };
+        
+        Object.entries(fields).forEach(([key, value]) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            form.appendChild(input);
         });
         
-        if (!response.ok) {
-            throw new Error(`خطأ في الإرسال: ${response.status}`);
-        }
+        document.body.appendChild(form);
         
-        const result = await response.json();
-        console.log('✅ تم إرسال البيانات إلى Google Sheets:', result);
-        showNotification('✅ تم حفظ النتيجة في Google Sheets', 'success');
-        return true;
+        // إرسال النموذج
+        form.submit();
+        document.body.removeChild(form);
         
-    } catch (error) {
-        console.error('❌ فشل في إرسال البيانات إلى Google Sheets:', error);
-        showNotification('❌ فشل في حفظ النتيجة في Google Sheets', 'error');
-        return false;
-    }
+        console.log('✅ تم إرسال النموذج إلى Google Sheets');
+        showNotification('✅ تم إرسال البيانات إلى Google Sheets - تحقق من التبويب الجديد', 'success');
+        resolve(true);
+    });
 }
+
+
+
+
+
 
 
 
@@ -1304,6 +1328,12 @@ function testGoogleSheetsConnection() {
             updateGoogleSheetsStatus('❌ خطأ في الاتصال: ' + error.message, 'error');
         });
 }
+
+
+
+
+
+
 
 
 
@@ -2230,6 +2260,7 @@ function tryAgain() {
 
 
 
+// ⭐⭐ الإصلاح: في دالة saveResult
 async function saveResult() {
     const newResult = {
         studentName: state.currentStudent,
@@ -2249,20 +2280,17 @@ async function saveResult() {
         await saveToJSONBin(currentData);
         console.log('تم حفظ النتيجة في السحابة بنجاح');
         
-        // ⭐⭐ الإصلاح: الحفظ في Google Sheets
+        // ⭐⭐ استخدام الطريقة الجديدة التي تتجنب CORS
         await sendToGoogleSheets(newResult);
         
     } catch (error) {
         console.error('فشل في حفظ النتيجة:', error);
-        // نسخة احتياطية في localStorage
         const localResults = JSON.parse(localStorage.getItem('quizResults')) || [];
         localResults.push(newResult);
         localStorage.setItem('quizResults', JSON.stringify(localResults));
         showNotification('⚠️ تم حفظ النتيجة محلياً فقط', 'warning');
     }
 }
-
-
 
 
 
