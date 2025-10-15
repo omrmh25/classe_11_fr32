@@ -1216,36 +1216,40 @@ const DOM = {
 // ⭐⭐ الإضافة الجديدة: دوال Google Sheets
 
 
+
+
+// ⭐⭐ الإصلاح: دوال Google Sheets - النسخة المصححة
 async function sendToGoogleSheets(studentData) {
-    return new Promise((resolve) => {
-        // إنشاء نموذج إرسال تقليدي
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = GOOGLE_SCRIPT_URL;
-        form.target = '_blank';
-        form.style.display = 'none';
+    if (!GOOGLE_SCRIPT_URL) {
+        console.log('❌ لم يتم تعيين رابط Google Script');
+        return false;
+    }
+    
+    try {
+        // إرسال البيانات كـ JSON في body الطلب
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(studentData)
+        });
         
-        // إضافة البيانات كنص عادي
-        form.innerHTML = `
-            <input type="hidden" name="studentName" value="${studentData.studentName}">
-            <input type="hidden" name="score" value="${studentData.score}">
-            <input type="hidden" name="total" value="${studentData.total}">
-            <input type="hidden" name="percentage" value="${studentData.percentage}">
-            <input type="hidden" name="quizTitle" value="${studentData.quizTitle}">
-            <input type="hidden" name="date" value="${studentData.date}">
-        `;
+        if (!response.ok) {
+            throw new Error(`خطأ في الإرسال: ${response.status}`);
+        }
         
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
+        const result = await response.json();
+        console.log('✅ تم إرسال البيانات إلى Google Sheets:', result);
+        showNotification('✅ تم حفظ النتيجة في Google Sheets', 'success');
+        return true;
         
-        showNotification('✅ تم إرسال البيانات - تحقق من Google Sheets', 'success');
-        resolve(true);
-    });
+    } catch (error) {
+        console.error('❌ فشل في إرسال البيانات إلى Google Sheets:', error);
+        showNotification('❌ فشل في حفظ النتيجة في Google Sheets', 'error');
+        return false;
+    }
 }
-
-
-
 
 
 
@@ -1278,7 +1282,7 @@ function testGoogleSheetsConnection() {
     
     updateGoogleSheetsStatus('جاري اختبار الاتصال...', 'warning');
     
-    // اختبار بسيط
+    // اختبار ببيانات تجريبية
     const testData = {
         studentName: 'اختبار اتصال',
         score: '5',
@@ -1295,8 +1299,12 @@ function testGoogleSheetsConnection() {
             } else {
                 updateGoogleSheetsStatus('❌ فشل في الاتصال', 'error');
             }
+        })
+        .catch(error => {
+            updateGoogleSheetsStatus('❌ خطأ في الاتصال: ' + error.message, 'error');
         });
 }
+
 
 
 
@@ -2211,6 +2219,17 @@ function tryAgain() {
 }
 
 // ⭐⭐ الإضافة الجديدة: تحديث دالة حفظ النتيجة
+
+
+
+
+
+
+
+
+
+
+
 async function saveResult() {
     const newResult = {
         studentName: state.currentStudent,
@@ -2224,13 +2243,13 @@ async function saveResult() {
     };
 
     try {
-        // الحفظ في JSONBin.io (الكود الأصلي)
+        // الحفظ في JSONBin.io
         const currentData = await loadFromJSONBin();
         currentData.push(newResult);
         await saveToJSONBin(currentData);
         console.log('تم حفظ النتيجة في السحابة بنجاح');
         
-        // ⭐⭐ الإضافة الجديدة: الحفظ في Google Sheets
+        // ⭐⭐ الإصلاح: الحفظ في Google Sheets
         await sendToGoogleSheets(newResult);
         
     } catch (error) {
@@ -2239,8 +2258,26 @@ async function saveResult() {
         const localResults = JSON.parse(localStorage.getItem('quizResults')) || [];
         localResults.push(newResult);
         localStorage.setItem('quizResults', JSON.stringify(localResults));
+        showNotification('⚠️ تم حفظ النتيجة محلياً فقط', 'warning');
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // تحديث لوحة الصدارة من JSONBin.io
 async function updateLeaderboard() {
