@@ -1221,18 +1221,26 @@ async function sendToGoogleSheets(studentData) {
     }
     
     try {
-        console.log('🔄 جاري إرسال البيانات...');
+        console.log('🔄 محاولة إرسال البيانات إلى Google Sheets...');
         
-        // إرسال طلب بسيط بدون بيانات معقدة
+        // البيانات الأساسية فقط
+        const requestData = {
+            studentName: studentData.studentName || 'طالب',
+            score: studentData.score?.toString() || '0',
+            total: studentData.total?.toString() || '0',
+            percentage: studentData.percentage?.toString() || '0',
+            quizTitle: studentData.quizTitle || 'اختبار',
+            date: studentData.date || new Date().toLocaleDateString('ar-EG')
+        };
+        
+        console.log('📤 البيانات المرسلة:', requestData);
+        
         const response = await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                action: 'save',
-                test: 'simple'
-            })
+            body: JSON.stringify(requestData)
         });
         
         console.log('📥 حالة الاستجابة:', response.status);
@@ -1242,14 +1250,15 @@ async function sendToGoogleSheets(studentData) {
             console.log('✅ الاستجابة:', result);
             
             if (result.success) {
-                showNotification('✅ تم الاختبار بنجاح - تحقق من Google Sheets', 'success');
+                showNotification('✅ تم حفظ النتيجة في Google Sheets', 'success');
                 return true;
             } else {
                 showNotification('❌ فشل في الحفظ: ' + result.error, 'error');
                 return false;
             }
         } else {
-            showNotification('❌ فشل في الاتصال', 'error');
+            console.error('❌ فشل في الاتصال:', response.status);
+            showNotification('❌ فشل في الاتصال بالسيرفر', 'error');
             return false;
         }
     } catch (error) {
@@ -1258,7 +1267,6 @@ async function sendToGoogleSheets(studentData) {
         return false;
     }
 }
-
 
 
 function saveGoogleScriptUrl() {
@@ -1281,15 +1289,14 @@ function testGoogleSheetsConnection() {
     
     updateGoogleSheetsStatus('جاري اختبار الاتصال...', 'warning');
     
-    // اختبار الاتصال بإرسال بيانات تجريبية
+    // اختبار بسيط
     const testData = {
         studentName: 'اختبار اتصال',
-        score: 1,
-        total: 1,
-        percentage: 100,
-        quizTitle: 'اختبار اتصال',
-        date: new Date().toLocaleDateString('ar-EG'),
-        timestamp: new Date().getTime()
+        score: '5',
+        total: '10',
+        percentage: '50',
+        quizTitle: 'اختبار الاتصال',
+        date: new Date().toLocaleDateString('ar-EG')
     };
     
     sendToGoogleSheets(testData)
@@ -1297,10 +1304,15 @@ function testGoogleSheetsConnection() {
             if (success) {
                 updateGoogleSheetsStatus('✅ الاتصال يعمل بشكل صحيح', 'success');
             } else {
-                updateGoogleSheetsStatus('❌ فشل في الاتصال - تحقق من الرابط', 'error');
+                updateGoogleSheetsStatus('❌ فشل في الاتصال', 'error');
             }
         });
 }
+
+
+
+
+
 
 function updateGoogleSheetsStatus(message, type) {
     const statusElement = document.getElementById('google-sheets-status');
